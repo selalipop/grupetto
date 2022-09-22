@@ -3,10 +3,8 @@ package com.spop.poverlay.util
 import kotlin.math.pow
 import kotlin.math.sqrt
 
-fun calculateSpeedFromPower(it: Float?) =
-    if (it == null) {
-        null
-    } else if (it < 0.1f) {
+fun calculateSpeedFromPower(it: Float) =
+    if (it < 0.1f) {
         0f
     } else {
         //https://ihaque.org/posts/2020/12/25/pelomon-part-ib-computing-speed/

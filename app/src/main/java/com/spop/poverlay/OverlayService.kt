@@ -2,17 +2,12 @@ package com.spop.poverlay
 
 import android.app.*
 import android.content.Intent
-import android.content.res.Resources
-import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
-import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.WindowManager.LayoutParams
-import android.widget.FrameLayout
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
@@ -23,10 +18,14 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.spop.poverlay.sensor.DummySensorInterface
+import com.spop.poverlay.sensor.PelotonV1SensorInterface
 import timber.log.Timber
 import java.util.*
 import kotlin.math.roundToInt
 
+
+private const val PelotonBrand = "Peloton"
 
 class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
     companion object {
@@ -104,14 +103,22 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
         }
 
+        val sensorInterface = if(Build.BRAND == PelotonBrand){
+            PelotonV1SensorInterface(this)
+        }else{
+            DummySensorInterface()
+        }
+
         val composeView = ComposeView(this).apply {
 
             ViewTreeLifecycleOwner.set(this, this@OverlayService)
             ViewTreeViewModelStoreOwner.set(this, this@OverlayService)
+
             setContent {
                 Overlay(
                     OverlayViewModel(
-                        this@OverlayService.application
+                        this@OverlayService.application,
+                        sensorInterface
                     )
                 )
             }

@@ -23,8 +23,12 @@ class KalmanFilter(
     }
 }
 
-fun Flow<Float>.smooth(): Flow<Float> {
-    val kalmanFilter = KalmanFilter()
+fun Flow<Float>.smooth(
+    processNoise: Float = 0.125f,
+    sensorNoise: Float = 16f, //32 is very smooth but slow
+    estimatedError: Float = 20f
+): Flow<Float> {
+    val kalmanFilter = KalmanFilter(processNoise, sensorNoise, estimatedError)
     return map {
         kalmanFilter.update(it)
     }
