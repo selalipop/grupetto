@@ -8,6 +8,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,12 +17,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.spop.poverlay.ui.theme.LatoFontFamily
+import com.spop.poverlay.ui.theme.PTONOverlayTheme
 import com.spop.poverlay.util.LineChart
 import kotlin.math.roundToInt
 import android.graphics.Color as AndroidColor
@@ -93,6 +101,28 @@ fun Overlay(viewModel: OverlayViewModel) {
 
 }
 
+@Preview(showBackground = true)
+@Composable
+fun PreviewStatCard() {
+    PTONOverlayTheme {
+
+        Surface(
+            color = Color.Black
+        ) {
+            Column(modifier = Modifier.wrapContentSize()) {
+                StatCard("Cadence", "100", "RPM")
+                Divider()
+                StatCard("Cadence", "10", "rpm")
+                Divider()
+                StatCard("Power", "10.2", "watts")
+                Divider()
+                StatCard("Power", "23.3", "watts")
+                Divider()
+                StatCard("Power", "102.3", "watts")
+            }
+        }
+    }
+}
 
 @Composable
 private fun StatCard(name: String, value: String, unit: String) {
@@ -100,22 +130,43 @@ private fun StatCard(name: String, value: String, unit: String) {
         modifier = Modifier
             .width(140.dp),
         horizontalAlignment = Alignment.CenterHorizontally
+
     ) {
         Text(
             text = name,
             color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            fontStyle = FontStyle.Italic,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Normal,
+            fontFamily = LatoFontFamily,
+            style = TextStyle(
+                platformStyle = PlatformTextStyle(
+                    includeFontPadding = false,
+                ),
+            )
         )
         Text(
             text = value,
-            color = Color.White, fontSize = 48.sp, fontWeight = FontWeight.ExtraBold,
+            color = Color.White,
+            fontSize = 48.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = LatoFontFamily,
+            style = TextStyle(
+                platformStyle = PlatformTextStyle(
+                    includeFontPadding = false,
+                ),
+            )
         )
         Text(
             text = unit,
-            fontSize = 12.sp,
+            fontSize = 14.sp,
             color = Color.White,
+            fontWeight = FontWeight.Light,
+            fontFamily = LatoFontFamily,
+            style = TextStyle(
+                platformStyle = PlatformTextStyle(
+                    includeFontPadding = false,
+                ),
+            )
         )
     }
 }

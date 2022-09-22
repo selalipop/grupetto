@@ -40,8 +40,8 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private val binder = MutableStateFlow<IBinder?>(null)
-    private val powerSensor = binder.filterNotNull().flatMapLatest {
+    private val binder = MutableSharedFlow<IBinder>(replay = 1)
+    private val powerSensor = binder.flatMapLatest {
         val powerSensor = PowerSensor(it)
         powerSensor.start()
         powerSensor.sensorValue
