@@ -21,7 +21,7 @@ fun LineChart(
     fillColor: Color = Color.LightGray,
     lineColor: Color = Color.DarkGray,
 ) {
-    val graph = remember { data.map { it.toFloat() } }
+    val graph = remember { data }
     AndroidView(
         modifier = modifier,
         factory = { context ->
@@ -46,7 +46,7 @@ fun LineChart(
         update = { view ->
             view.setDataset(Dataset(graph.mapIndexed { index, value ->
                 //Start values at 1f to keep line visible at all times
-                DataPoint(index.toFloat(), value.coerceIn(1f, maxValue))
+                DataPoint(index.toFloat(), value.toFloat().coerceIn(1f, maxValue))
             }.toMutableList()))
                 .setSecondDataset(
                     //There's no way to set explicit bounds with this graphing library
@@ -57,7 +57,7 @@ fun LineChart(
                             DataPoint(OverlayViewModel.GraphMaxDataPoints.toFloat(), maxValue)
                         )
                     )
-                ).drawSmoothPath()
+                )
                 .drawFill(withGradient = true)
                 .drawDataset()
         }
