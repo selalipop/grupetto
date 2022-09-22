@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.map
 
 class KalmanFilter(
     private var processNoise: Float = 0.125f,
-    private var sensorNoise: Float = 10f, //32 is very smooth but slow
+    private var sensorNoise: Float = 16f, //32 is very smooth but slow
     private var estimatedError: Float = 20f,
     initialValue: Float = 0f
 ) {

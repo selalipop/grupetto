@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.flow
 import kotlin.jvm.*
 import kotlin.math.*
 import kotlin.time.Duration
-
+//Imported from declined PR to main Kotlin Flow repository
 /**
  * Returns a flow of lists each not exceeding the given [size].
  * The last list in the resulting flow may have less elements than the given [size].
@@ -73,7 +73,6 @@ fun <T> Flow<T>.windowed(size: Int, step: Int, partialWindows: Boolean): Flow<Li
  * @param partialWindows controls whether or not to keep partial windows in the end if any.
  */
 
-@OptIn(ExperimentalStdlibApi::class)
 @FlowPreview
 fun <T, R> Flow<T>.windowed(size: Int, step: Int, partialWindows: Boolean, transform: suspend (List<T>) -> R): Flow<R> {
     require(size > 0 && step > 0) { "Size and step should be greater than 0, but was size: $size, step: $step" }
