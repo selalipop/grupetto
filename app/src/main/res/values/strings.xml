@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">PTON Overlay</string>
+    <string name="overlay_notification">Peloton Overlay Service is Running</string>
+</resources>
