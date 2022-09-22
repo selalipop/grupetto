@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.spop.poverlay.sensor.*
 import com.spop.poverlay.util.calculateSpeedFromPower
+import com.spop.poverlay.util.smooth
 import com.spop.poverlay.util.tickerFlow
 import com.spop.poverlay.util.windowed
 import kotlinx.coroutines.Dispatchers
@@ -69,10 +70,14 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 
     val powerGraph = mutableStateListOf<Float>()
     init {
+        setupPowerGraphData()
+    }
+
+    private fun setupPowerGraphData() {
         viewModelScope.launch(Dispatchers.IO) {
             //Sensor value is read every tick and added to graph
             combine(
-                powerSensor.sensorValueToFloat(),
+                powerSensor.sensorValueToFloat().smooth(),
                 tickerFlow(GraphUpdatePeriod)
             ) { sensorValue, _ -> sensorValue }.collect { value ->
                 withContext(Dispatchers.Main) {
