@@ -27,7 +27,7 @@ class PowerSensor(binder: IBinder) : Sensor<Float>(Command.GetPowerRepeating, bi
 
             //At low speeds the sensor occasionally sends an incorrect spike in values
             //This filters for such cases
-            if (power < SpuriousReadingThreshold
+            if (lastSensorPower < SpuriousReadingThreshold
                 && power - lastSensorPower > SpuriousReadingDelta
                 && consecutiveRejections < SpuriousReadingMaxRejections
             ) {
