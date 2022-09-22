@@ -15,12 +15,13 @@ import com.yabu.livechart.view.LiveChartStyle
 
 @Composable
 fun LineChart(
-    input: Collection<Float>,
+    data: Collection<Number>,
+    maxValue: Float,
     modifier: Modifier,
-    fillColor: Color,
-    lineColor: Color,
+    fillColor: Color = Color.LightGray,
+    lineColor: Color = Color.DarkGray,
 ) {
-    val graph = remember { input }
+    val graph = remember { data.map { it.toFloat() } }
     AndroidView(
         modifier = modifier,
         factory = { context ->
@@ -44,14 +45,16 @@ fun LineChart(
         },
         update = { view ->
             view.setDataset(Dataset(graph.mapIndexed { index, value ->
-                //Start axis at 1f to keep line visible at all times
-                DataPoint(index.toFloat(), value + 1f)
+                //Start values at 1f to keep line visible at all times
+                DataPoint(index.toFloat(), value.coerceIn(1f, maxValue))
             }.toMutableList()))
                 .setSecondDataset(
+                    //There's no way to set explicit bounds with this graphing library
+                    //This hidden dataset forces the graph to cover the given bounds
                     Dataset(
                         mutableListOf(
                             DataPoint(0f, 0f),
-                            DataPoint(OverlayViewModel.GraphMaxDataPoints.toFloat(), 200f)
+                            DataPoint(OverlayViewModel.GraphMaxDataPoints.toFloat(), maxValue)
                         )
                     )
                 ).drawSmoothPath()
