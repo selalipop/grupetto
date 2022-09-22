@@ -1,6 +1,5 @@
 package com.spop.poverlay
 
-import android.view.ViewGroup.LayoutParams
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.TweenSpec
@@ -14,18 +13,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.*
-import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.spop.poverlay.util.LineChart
-import com.yabu.livechart.model.DataPoint
-import com.yabu.livechart.model.Dataset
-import com.yabu.livechart.view.LiveChart
-import com.yabu.livechart.view.LiveChartStyle
 import kotlin.math.roundToInt
 import android.graphics.Color as AndroidColor
 
@@ -83,7 +79,8 @@ fun Overlay(viewModel: OverlayViewModel) {
         StatCard("Power", power, "watts")
         StatCard("Cadence", rpm, "rpm")
         LineChart(
-            powerGraph,
+            data = powerGraph,
+            maxValue = 250f,
             modifier = Modifier
                 .width(175.dp)
                 .height(120.dp),
