@@ -5,11 +5,10 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.animateIntOffsetAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Divider
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,18 +16,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.text.PlatformTextStyle
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.spop.poverlay.ui.theme.LatoFontFamily
-import com.spop.poverlay.ui.theme.PTONOverlayTheme
 import com.spop.poverlay.util.LineChart
 import kotlin.math.roundToInt
 import android.graphics.Color as AndroidColor
@@ -43,6 +36,7 @@ fun Overlay(viewModel: OverlayViewModel) {
     val rpm by viewModel.rpmValue.collectAsState(initial = placeholderText)
     val resistance by viewModel.resistanceValue.collectAsState(initial = placeholderText)
     val speed by viewModel.speedValue.collectAsState(initial = placeholderText)
+    val speedLabel by viewModel.speedLabel.collectAsState(initial = "")
 
     val visible by viewModel.isVisible.collectAsState(initial = true)
     var rowSize by remember { mutableStateOf(IntSize.Zero) }
@@ -84,8 +78,9 @@ fun Overlay(viewModel: OverlayViewModel) {
             },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        StatCard("Power", power, "watts")
-        StatCard("Cadence", rpm, "rpm")
+        val statCardModifier = Modifier.width(140.dp)
+        StatCard("Power", power, "watts", statCardModifier)
+        StatCard("Cadence", rpm, "rpm", statCardModifier)
         LineChart(
             data = powerGraph,
             maxValue = 250f,
@@ -95,40 +90,18 @@ fun Overlay(viewModel: OverlayViewModel) {
             fillColor = Color(AndroidColor.parseColor("#FF3348")),
             lineColor = Color(AndroidColor.parseColor("#D9182B")),
         )
-        StatCard("Resistance", resistance, "")
-        StatCard("Speed", speed, "mph")
+        StatCard("Resistance", resistance, "", statCardModifier)
+        StatCard("Speed", speed, speedLabel, statCardModifier.clickable {
+            viewModel.onClickedSpeed()
+        })
     }
 
 }
 
-@Preview(showBackground = true)
 @Composable
-fun PreviewStatCard() {
-    PTONOverlayTheme {
-
-        Surface(
-            color = Color.Black
-        ) {
-            Column(modifier = Modifier.wrapContentSize()) {
-                StatCard("Cadence", "100", "RPM")
-                Divider()
-                StatCard("Cadence", "10", "rpm")
-                Divider()
-                StatCard("Power", "10.2", "watts")
-                Divider()
-                StatCard("Power", "23.3", "watts")
-                Divider()
-                StatCard("Power", "102.3", "watts")
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatCard(name: String, value: String, unit: String) {
+private fun StatCard(name: String, value: String, unit: String, modifier: Modifier) {
     Column(
-        modifier = Modifier
-            .width(140.dp),
+        modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
 
     ) {
@@ -137,12 +110,7 @@ private fun StatCard(name: String, value: String, unit: String) {
             color = Color.White,
             fontSize = 16.sp,
             fontWeight = FontWeight.Normal,
-            fontFamily = LatoFontFamily,
-            style = TextStyle(
-                platformStyle = PlatformTextStyle(
-                    includeFontPadding = false,
-                ),
-            )
+            fontFamily = LatoFontFamily
         )
         Text(
             text = value,
@@ -150,23 +118,13 @@ private fun StatCard(name: String, value: String, unit: String) {
             fontSize = 48.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = LatoFontFamily,
-            style = TextStyle(
-                platformStyle = PlatformTextStyle(
-                    includeFontPadding = false,
-                ),
-            )
         )
         Text(
             text = unit,
             fontSize = 14.sp,
             color = Color.White,
             fontWeight = FontWeight.Light,
-            fontFamily = LatoFontFamily,
-            style = TextStyle(
-                platformStyle = PlatformTextStyle(
-                    includeFontPadding = false,
-                ),
-            )
+            fontFamily = LatoFontFamily
         )
     }
 }

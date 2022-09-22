@@ -18,6 +18,7 @@ import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.milliseconds
 
 
+private const val MphToKph = 1.60934
 
 class OverlayViewModel(application: Application, private val sensorInterface: SensorInterface) :
     AndroidViewModel(application) {
@@ -45,16 +46,37 @@ class OverlayViewModel(application: Application, private val sensorInterface: Se
         }
     }
 
-
+    var useMph = MutableStateFlow(true)
     val powerValue = sensorInterface.power
         .smooth(sensorNoise = SmoothingFactor).map { "%.1f".format(it) }
     val rpmValue = sensorInterface.cadence
         .smooth(sensorNoise = SmoothingFactor).map { "%.0f".format(it) }
-    val speedValue = sensorInterface.speed
-        .smooth(sensorNoise = SmoothingFactor).map { "%.1f".format(it) }
+
+    val speedValue = combine(
+        sensorInterface.speed.smooth(sensorNoise = SmoothingFactor), useMph
+    ) { speed, isMph ->
+        val value = if (isMph) {
+            speed
+        } else {
+            speed * MphToKph
+        }
+        "%.1f".format(value)
+    }
+    val speedLabel = useMph.map {
+        if(it){
+            "mph"
+        }else{
+            "kph"
+        }
+    }
     val resistanceValue = sensorInterface.resistance
         .smooth(sensorNoise = SmoothingFactor).map { "%.0f".format(it) }
 
+    fun onClickedSpeed() {
+        viewModelScope.launch {
+            useMph.emit(!useMph.value)
+        }
+    }
 
     val powerGraph = mutableStateListOf<Float>()
 
