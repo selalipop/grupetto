@@ -4,12 +4,15 @@ import android.os.*
 import androidx.core.os.bundleOf
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 import java.util.*
 
+/**
+ * Handles the flow of sending a message to the Sensor Service linked via Binder
+ * And receiving a result on a HandlerThread
+ */
 abstract class Sensor<T>(private val command: Command, private val binder: IBinder) {
     private val sensorThread = HandlerThread("PelotonSensor-${command.name}-${UUID.randomUUID()}")
     private val mutableSensorValue = MutableSharedFlow<Result<T?>>(replay = 1,

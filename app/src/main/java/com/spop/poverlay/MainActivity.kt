@@ -18,8 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.lifecycleScope
 import com.spop.poverlay.ui.theme.PTONOverlayTheme
-import timber.log.Timber
-import timber.log.Timber.DebugTree
 
 
 class MainActivity : ComponentActivity() {
@@ -27,7 +25,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Timber.plant(DebugTree())
 
         viewModel.finishActivity.observe(this) {
             finish()
@@ -41,7 +38,11 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    ConfigurationPage(viewModel)
+                    ConfigurationPage(
+                        viewModel.showPermissionInfo,
+                        viewModel::onGrantPermissionClicked,
+                        viewModel::onStartServiceClicked
+                    )
                 }
             }
         }

@@ -29,7 +29,7 @@ class ConfigurationViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
-    fun onStartService() {
+    fun onStartServiceClicked() {
         Timber.i("Starting service")
         ContextCompat.startForegroundService(
             getApplication(),
