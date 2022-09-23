@@ -7,7 +7,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.spop.poverlay.MainActivity
 import com.spop.poverlay.sensor.SensorInterface
-import com.spop.poverlay.util.smooth
 import com.spop.poverlay.util.tickerFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,8 +29,6 @@ class OverlayViewModel(application: Application, private val sensorInterface: Se
 
         //Max number of points before data starts to shift
         const val GraphMaxDataPoints = 300
-
-        private const val SmoothingFactor = 8f
     }
 
     private val mutableIsVisible = MutableStateFlow(true)
@@ -47,14 +44,18 @@ class OverlayViewModel(application: Application, private val sensorInterface: Se
         }
     }
 
-    var useMph = MutableStateFlow(true)
+    private var useMph = MutableStateFlow(true)
+
     val powerValue = sensorInterface.power
-        .smooth(sensorNoise = SmoothingFactor).map { "%.0f".format(it) }
+        .map { "%.0f".format(it) }
     val rpmValue = sensorInterface.cadence
-        .smooth(sensorNoise = SmoothingFactor).map { "%.0f".format(it) }
+        .map { "%.0f".format(it) }
+
+    val resistanceValue = sensorInterface.resistance
+        .map { "%.0f".format(it) }
 
     val speedValue = combine(
-        sensorInterface.speed.smooth(sensorNoise = SmoothingFactor), useMph
+        sensorInterface.speed, useMph
     ) { speed, isMph ->
         val value = if (isMph) {
             speed
@@ -64,14 +65,12 @@ class OverlayViewModel(application: Application, private val sensorInterface: Se
         "%.1f".format(value)
     }
     val speedLabel = useMph.map {
-        if(it){
+        if (it) {
             "mph"
-        }else{
+        } else {
             "kph"
         }
     }
-    val resistanceValue = sensorInterface.resistance
-        .smooth(sensorNoise = SmoothingFactor).map { "%.0f".format(it) }
 
     fun onClickedSpeed() {
         viewModelScope.launch {
@@ -89,7 +88,7 @@ class OverlayViewModel(application: Application, private val sensorInterface: Se
         viewModelScope.launch(Dispatchers.IO) {
             //Sensor value is read every tick and added to graph
             combine(
-                sensorInterface.power.smooth(),
+                sensorInterface.power,
                 tickerFlow(GraphUpdatePeriod)
             ) { sensorValue, _ -> sensorValue }.collect { value ->
                 withContext(Dispatchers.Main) {

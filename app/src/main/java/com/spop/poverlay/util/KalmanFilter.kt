@@ -5,10 +5,9 @@ import kotlinx.coroutines.flow.map
 
 //https://web.archive.org/web/20120724084346/http://interactive-matter.eu/blog/2009/12/18/filtering-sensor-data-with-a-kalman-filter/
 //https://github.com/bachagas/Kalman/blob/master/Kalman.h
-
 class KalmanFilter(
     private var processNoise: Float = 0.125f,
-    private var sensorNoise: Float = 16f, //32 is very smooth but slow
+    private var sensorNoise: KalmanSmoothFactor = KalmanSmoothFactor.Normal,
     private var estimatedError: Float = 20f,
     initialValue: Float = 0f
 ) {
@@ -16,7 +15,7 @@ class KalmanFilter(
     var currentValue = initialValue
     fun update(value: Float): Float {
         estimatedError += processNoise
-        kalmanGain = estimatedError / (estimatedError + sensorNoise)
+        kalmanGain = estimatedError / (estimatedError + sensorNoise.noise)
         currentValue += kalmanGain * (value - currentValue)
         estimatedError *= (1 - kalmanGain)
         return currentValue
@@ -25,7 +24,7 @@ class KalmanFilter(
 
 fun Flow<Float>.smooth(
     processNoise: Float = 0.125f,
-    sensorNoise: Float = 16f, //32 is very smooth but slow
+    sensorNoise: KalmanSmoothFactor = KalmanSmoothFactor.Normal,
     estimatedError: Float = 20f
 ): Flow<Float> {
     val kalmanFilter = KalmanFilter(processNoise, sensorNoise, estimatedError)

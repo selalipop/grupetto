@@ -2,12 +2,14 @@ package com.spop.poverlay.sensor
 
 import android.content.Context
 import android.os.IBinder
+import com.spop.poverlay.util.KalmanSmoothFactor
+import com.spop.poverlay.util.smooth
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import timber.log.Timber
 import kotlin.coroutines.CoroutineContext
 
-class PelotonV1SensorInterface(context: Context) : SensorInterface, CoroutineScope{
+class PelotonV1SensorInterface(context: Context) : SensorInterface, CoroutineScope {
     private val binder = MutableSharedFlow<IBinder>(replay = 1)
 
     init {
@@ -20,7 +22,7 @@ class PelotonV1SensorInterface(context: Context) : SensorInterface, CoroutineSco
     override val coroutineContext: CoroutineContext
         get() = SupervisorJob()
 
-    fun stop(){
+    fun stop() {
         coroutineContext.cancelChildren()
     }
 
@@ -30,6 +32,7 @@ class PelotonV1SensorInterface(context: Context) : SensorInterface, CoroutineSco
             powerSensor.start()
             powerSensor.sensorValue
         }.mapV1SensorToFloat()
+            .smooth()
 
     override val cadence: Flow<Float>
         get() = binder.flatMapLatest {
@@ -37,13 +40,16 @@ class PelotonV1SensorInterface(context: Context) : SensorInterface, CoroutineSco
             rpmSensor.start()
             rpmSensor.sensorValue
         }.mapV1SensorToFloat()
+            .smooth()
 
     override val resistance: Flow<Float>
         get() = binder.flatMapLatest {
             val resistanceSensor = ResistanceSensor(it)
             resistanceSensor.start()
             resistanceSensor.sensorValue
-        }.mapV1SensorToFloat()
+        }
+            .mapV1SensorToFloat()
+            .smooth(sensorNoise = KalmanSmoothFactor.Minimal)
 
     private fun Flow<Result<Float?>>.mapV1SensorToFloat() =
         filterNotNull()
