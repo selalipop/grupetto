@@ -40,7 +40,7 @@ class OverlayViewModel(application: Application, private val sensorInterface: Se
         mutableIsVisible.apply { value = !value }
     }
 
-    fun onOverlayLongPress() {
+    fun onOverlayDoubleTap() {
         getApplication<Application>().apply {
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)

@@ -9,10 +9,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
@@ -110,32 +108,28 @@ fun Overlay(
             shape = backgroundShape,
         )
         .pointerInput(Unit) {
-            detectTapGestures(
-                onTap = { viewModel.onOverlayPressed() },
-                onLongPress = { viewModel.onOverlayLongPress() }
-            )
-        }
-        .draggable(
-            orientation = Orientation.Horizontal,
-            state = rememberDraggableState { delta ->
-                horizontalDragOffset += delta
-                horizontalDragOffset =
-                    horizontalDragCallback(horizontalDragOffset.roundToInt()).toFloat()
-            }
-        )
-        .draggable(
-            orientation = Orientation.Vertical,
-            state = rememberDraggableState { delta ->
-                verticalDragOffset += delta
-                val shouldReset = verticalDragCallback(verticalDragOffset.roundToInt())
-                if (shouldReset) {
+            detectDragGestures(
+                onDrag = { change, offset ->
+                    change.consume()
+                    horizontalDragOffset += offset.x
+                    horizontalDragOffset =
+                        horizontalDragCallback(horizontalDragOffset.roundToInt()).toFloat()
+
+                    verticalDragOffset += offset.y
+                    val shouldReset = verticalDragCallback(verticalDragOffset.roundToInt())
+                    if (shouldReset) {
+                        verticalDragOffset = 0f
+                    }
+                },
+                onDragEnd = {
                     verticalDragOffset = 0f
                 }
-            },
-            onDragStopped = {
-                verticalDragOffset = 0f
-            }
-        )
+            )
+            detectTapGestures(
+                onTap = { viewModel.onOverlayPressed() },
+                onDoubleTap = { viewModel.onOverlayDoubleTap() }
+            )
+        }
         .wrapContentWidth(unbounded = false)
     ) {
         AnimatedVisibility(
