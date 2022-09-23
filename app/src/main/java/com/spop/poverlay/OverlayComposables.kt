@@ -26,8 +26,10 @@ import com.spop.poverlay.util.LineChart
 import kotlin.math.roundToInt
 import android.graphics.Color as AndroidColor
 
+const val PercentOffsetOnHide = .9f
+
 @Composable
-fun Overlay(viewModel: OverlayViewModel) {
+fun Overlay(viewModel: OverlayViewModel, offsetCallback : (Int)->Unit) {
     val placeholderText = "-"
 
     val power by viewModel.powerValue.collectAsState(initial = placeholderText)
@@ -40,7 +42,6 @@ fun Overlay(viewModel: OverlayViewModel) {
 
     val visible by viewModel.isVisible.collectAsState(initial = true)
     var rowSize by remember { mutableStateOf(IntSize.Zero) }
-
     val backgroundColor by animateColorAsState(
         if (visible) {
             Color(20, 20, 20)
@@ -49,24 +50,25 @@ fun Overlay(viewModel: OverlayViewModel) {
         }, animationSpec = TweenSpec(150, 0)
     )
 
+    val maxOffset = rowSize.height * PercentOffsetOnHide
+
     val visibilityOffset by animateIntOffsetAsState(
         if (visible) {
             IntOffset.Zero
         } else {
-            IntOffset(0, (rowSize.height * .9f).roundToInt())
+            IntOffset(0, -maxOffset.roundToInt())
         },
         animationSpec = TweenSpec(150, 0, LinearEasing)
     )
-
+    offsetCallback(visibilityOffset.y)
     Row(
         modifier = Modifier
-            .offset { visibilityOffset }
             .background(
                 color = backgroundColor,
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
             )
-            .padding(horizontal = 48.dp)
             .wrapContentSize(unbounded = true)
+            .padding(horizontal = 24.dp)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { viewModel.onOverlayPressed() },

@@ -91,24 +91,25 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
         }
 
         val widthPx = (OverlayWidthDp.value * resources.displayMetrics.density).roundToInt()
+        val defaultFlags = (LayoutParams.FLAG_NOT_TOUCH_MODAL
+                or LayoutParams.FLAG_NOT_FOCUSABLE
+                or LayoutParams.FLAG_LAYOUT_NO_LIMITS
+                or LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH)
         val params = LayoutParams(
             widthPx,
             LayoutParams.WRAP_CONTENT,
             layoutFlag,
-            LayoutParams.FLAG_NOT_TOUCH_MODAL
-                    or LayoutParams.FLAG_NOT_FOCUSABLE
-                    or LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            defaultFlags,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
         }
 
-        val sensorInterface = if(Build.BRAND == PelotonBrand){
+        val sensorInterface = if (Build.BRAND == PelotonBrand) {
             PelotonV1SensorInterface(this)
-        }else{
+        } else {
             DummySensorInterface()
         }
-
         val composeView = ComposeView(this).apply {
 
             ViewTreeLifecycleOwner.set(this, this@OverlayService)
@@ -120,8 +121,12 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                         this@OverlayService.application,
                         sensorInterface
                     )
-                )
+                ) { offset ->
+                    params.y = offset
+                    wm.updateViewLayout(this, params)
+                }
             }
+
             setViewTreeSavedStateRegistryOwner(this@OverlayService)
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             alpha = 0.9f
@@ -132,11 +137,11 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
             )
             clipChildren = false
             clipToOutline = false
-            clipToPadding = false
         }
 
         wm.addView(composeView, params)
     }
+
 
     private fun prepareNotification(notificationManager: NotificationManagerCompat): Notification {
         val channelId = UUID.randomUUID().toString()
@@ -159,7 +164,6 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
         } else {
             PendingIntent.FLAG_UPDATE_CURRENT
         }
-
         val pendingIntent = PendingIntent.getActivity(
             this,
             0,

@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    Configuration(viewModel)
+                    ConfigurationPage(viewModel)
                 }
             }
         }
@@ -45,7 +45,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Configuration(viewModel: ConfigurationViewModel = viewModel()) {
+fun ConfigurationPage(viewModel: ConfigurationViewModel = viewModel()) {
     Box {
         Button(
             modifier = Modifier.align(Alignment.Center),
