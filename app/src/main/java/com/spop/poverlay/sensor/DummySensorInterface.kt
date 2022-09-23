@@ -20,7 +20,7 @@ class DummySensorInterface : SensorInterface {
             (sin(Math.toRadians(it.toDouble())) + 1) * (magnitude / 2)
         }
         for(value in sineValues){
-            delay(500.milliseconds)
+            delay(100.milliseconds)
             emit(value.toFloat())
         }
     }
