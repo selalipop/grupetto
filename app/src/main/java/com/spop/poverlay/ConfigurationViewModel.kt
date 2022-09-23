@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
+import com.spop.poverlay.overlay.OverlayService
 import timber.log.Timber
 
 class ConfigurationViewModel(application: Application) : AndroidViewModel(application) {

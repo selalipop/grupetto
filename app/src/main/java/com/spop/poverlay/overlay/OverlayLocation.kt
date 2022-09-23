@@ -1,4 +1,4 @@
-package com.spop.poverlay
+package com.spop.poverlay.overlay
 
 import android.view.Gravity
 

@@ -1,7 +1,8 @@
-package com.spop.poverlay
+package com.spop.poverlay.overlay
 
 import android.app.*
 import android.content.Intent
+import android.content.res.Resources
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
@@ -20,11 +21,14 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.spop.poverlay.MainActivity
+import com.spop.poverlay.R
 import com.spop.poverlay.sensor.DummySensorInterface
 import com.spop.poverlay.sensor.PelotonV1SensorInterface
 import timber.log.Timber
 import java.util.*
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 
@@ -36,6 +40,10 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
 
         val OverlayWidthDp = 650.dp
         val OverlayHeightDp = 100.dp
+
+        //If the overlay is dragged within this many pixels of the center of the screen
+        //snap to the center of the screen
+        val OverlayCenterSnapRangePx = 20
 
         //Increases the size of the touch target during the hidden state
         const val HiddenTouchTargetMarginPx = 20
@@ -92,6 +100,7 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
     private fun buildDialog(location: OverlayLocation) {
         val wm = getSystemService(WINDOW_SERVICE) as WindowManager
 
+
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             LayoutParams.TYPE_APPLICATION_OVERLAY
         } else {
@@ -146,8 +155,48 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                 Overlay(
                     overlayViewModel,
                     OverlayHeightDp,
-                    location
+                    location,
+                    { offset ->
+                        if (offset > -OverlayCenterSnapRangePx && offset < OverlayCenterSnapRangePx) {
+                            composeParams.x = 0
+                        } else {
+                            val overlayWidthPx =
+                                OverlayWidthDp.value * Resources.getSystem().displayMetrics.density
+                            val screenWidth = resources.displayMetrics.widthPixels
+                            val dragRange =  ceil((screenWidth-overlayWidthPx) / 2).toInt()
+                            composeParams.x = offset.coerceIn(-dragRange, dragRange)
+                        }
+
+                        wm.updateViewLayout(this, composeParams)
+                    }
                 ) { offset, remainingVisibleHeight ->
+                    /**
+                     * Views attached directly to the window manager block all touches regardless
+                     * of if there is content beneath them
+                     *
+                     * But changing the height of the ComposeView results in janky animations.
+                     *
+                     * This solution disables touches on the ComposeView when it hides
+                     * Then an invisible view appears to capture touches
+                     */
+                    /**
+                     * Views attached directly to the window manager block all touches regardless
+                     * of if there is content beneath them
+                     *
+                     * But changing the height of the ComposeView results in janky animations.
+                     *
+                     * This solution disables touches on the ComposeView when it hides
+                     * Then an invisible view appears to capture touches
+                     */
+                    /**
+                     * Views attached directly to the window manager block all touches regardless
+                     * of if there is content beneath them
+                     *
+                     * But changing the height of the ComposeView results in janky animations.
+                     *
+                     * This solution disables touches on the ComposeView when it hides
+                     * Then an invisible view appears to capture touches
+                     */
                     /**
                      * Views attached directly to the window manager block all touches regardless
                      * of if there is content beneath them

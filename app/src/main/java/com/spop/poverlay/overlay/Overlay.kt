@@ -1,4 +1,4 @@
-package com.spop.poverlay
+package com.spop.poverlay.overlay
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -9,31 +9,38 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.*
-import com.spop.poverlay.ui.theme.LatoFontFamily
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import com.spop.poverlay.util.LineChart
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import android.graphics.Color as AndroidColor
 
 //This is the percentage of the overlay that is offscreen when hidden
 const val PercentVisibleWhenHidden = .14f
-
+const val VisibilityChangeDuration = 150
+val OverlayCornerRadius = 25.dp
+val StatCardWidth = 105.dp
+val PowerChartWidth = 160.dp
 @Composable
 fun Overlay(
     viewModel: OverlayViewModel,
     height: Dp,
     location: OverlayLocation,
+    dragCallback: (Int) -> Unit,
     offsetCallback: (Int, Int) -> Unit
 ) {
     val placeholderText = "-"
@@ -47,13 +54,13 @@ fun Overlay(
     val speedLabel by viewModel.speedLabel.collectAsState(initial = "")
 
     val visible by viewModel.isVisible.collectAsState(initial = true)
-    val visibilityChangeDuration = 150
+
     val backgroundColor by animateColorAsState(
         if (visible) {
             Color(20, 20, 20)
         } else {
             Color(252, 93, 72)
-        }, animationSpec = TweenSpec(visibilityChangeDuration, 0)
+        }, animationSpec = TweenSpec(VisibilityChangeDuration, 0)
     )
 
     val maxOffset = with(LocalDensity.current) {
@@ -68,22 +75,29 @@ fun Overlay(
         if (visible) {
             IntOffset.Zero
         } else {
-            when(location){
+            when (location) {
                 OverlayLocation.Top -> IntOffset(0, -maxOffset)
                 OverlayLocation.Bottom -> IntOffset(0, maxOffset)
             }
         },
-        animationSpec = TweenSpec(visibilityChangeDuration, 0, LinearEasing)
+        animationSpec = TweenSpec(VisibilityChangeDuration, 0, LinearEasing)
     )
 
-    val offset = visibilityOffset.y
-    val remainingVisibleHeight = abs(heightPx - (abs(offset)))
+    val hideOffset = visibilityOffset.y
+    val remainingVisibleHeight = abs(heightPx - (abs(hideOffset)))
     offsetCallback(visibilityOffset.y, remainingVisibleHeight)
 
-    val cornerRadius = 25.dp
-    val backgroundShape = when(location){
-        OverlayLocation.Top -> RoundedCornerShape(bottomStart = cornerRadius, bottomEnd = cornerRadius)
-        OverlayLocation.Bottom -> RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius)
+    var dragOffset by remember { mutableStateOf(0f) }
+
+    val backgroundShape = when (location) {
+        OverlayLocation.Top -> RoundedCornerShape(
+            bottomStart = OverlayCornerRadius,
+            bottomEnd = OverlayCornerRadius
+        )
+        OverlayLocation.Bottom -> RoundedCornerShape(
+            topStart = OverlayCornerRadius,
+            topEnd = OverlayCornerRadius
+        )
     }
     Box(modifier = Modifier
         .offset { visibilityOffset }
@@ -91,20 +105,28 @@ fun Overlay(
         .background(
             color = backgroundColor,
             shape = backgroundShape,
-        ).pointerInput(Unit) {
+        )
+        .pointerInput(Unit) {
             detectTapGestures(
                 onTap = { viewModel.onOverlayPressed() },
                 onLongPress = { viewModel.onOverlayLongPress() }
             )
         }
+        .draggable(
+            orientation = Orientation.Horizontal,
+            state = rememberDraggableState { delta ->
+                dragOffset += delta
+                dragCallback(dragOffset.roundToInt())
+            }
+        )
         .wrapContentWidth(unbounded = false)
-        ) {
+    ) {
         AnimatedVisibility(
             visible = visible,
             enter = fadeIn(),
             exit = fadeOut(),
         ) {
-            val rowAlignment = when(location){
+            val rowAlignment = when (location) {
                 OverlayLocation.Top -> Alignment.Top
                 OverlayLocation.Bottom -> Alignment.Bottom
             }
@@ -116,17 +138,17 @@ fun Overlay(
                 verticalAlignment = rowAlignment,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                val statCardModifier = Modifier.width(105.dp)
+                val statCardModifier = Modifier.width(StatCardWidth)
                 StatCard("Power", power, "watts", statCardModifier)
                 StatCard("Cadence", rpm, "rpm", statCardModifier)
                 LineChart(
                     data = powerGraph,
                     maxValue = 250f,
                     modifier = Modifier
-                        .requiredWidth(120.dp)
+                        .requiredWidth(PowerChartWidth)
                         .requiredHeight(100.dp)
                         .padding(bottom = 10.dp)
-                        .padding(horizontal = 20.dp),
+                        .padding(horizontal = 5.dp),
                     fillColor = Color(AndroidColor.parseColor("#FF3348")),
                     lineColor = Color(AndroidColor.parseColor("#D9182B")),
                 )
@@ -139,34 +161,3 @@ fun Overlay(
     }
 
 }
-
-@Composable
-private fun StatCard(name: String, value: String, unit: String, modifier: Modifier) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = name,
-            color = Color.White,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            fontFamily = LatoFontFamily
-        )
-        Text(
-            text = value,
-            color = Color.White,
-            fontSize = 48.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = LatoFontFamily,
-        )
-        Text(
-            text = unit,
-            fontSize = 14.sp,
-            color = Color.White,
-            fontWeight = FontWeight.Light,
-            fontFamily = LatoFontFamily
-        )
-    }
-}
-
