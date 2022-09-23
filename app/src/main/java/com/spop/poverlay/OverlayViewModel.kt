@@ -48,7 +48,7 @@ class OverlayViewModel(application: Application, private val sensorInterface: Se
 
     var useMph = MutableStateFlow(true)
     val powerValue = sensorInterface.power
-        .smooth(sensorNoise = SmoothingFactor).map { "%.1f".format(it) }
+        .smooth(sensorNoise = SmoothingFactor).map { "%.0f".format(it) }
     val rpmValue = sensorInterface.cadence
         .smooth(sensorNoise = SmoothingFactor).map { "%.0f".format(it) }
 

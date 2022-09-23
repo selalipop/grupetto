@@ -30,7 +30,12 @@ import android.graphics.Color as AndroidColor
 const val PercentVisibleWhenHidden = .14f
 
 @Composable
-fun Overlay(viewModel: OverlayViewModel, height: Dp, offsetCallback: (Int, Int) -> Unit) {
+fun Overlay(
+    viewModel: OverlayViewModel,
+    height: Dp,
+    location: OverlayLocation,
+    offsetCallback: (Int, Int) -> Unit
+) {
     val placeholderText = "-"
 
     val power by viewModel.powerValue.collectAsState(initial = placeholderText)
@@ -63,7 +68,10 @@ fun Overlay(viewModel: OverlayViewModel, height: Dp, offsetCallback: (Int, Int) 
         if (visible) {
             IntOffset.Zero
         } else {
-            IntOffset(0, -maxOffset)
+            when(location){
+                OverlayLocation.Top -> IntOffset(0, -maxOffset)
+                OverlayLocation.Bottom -> IntOffset(0, maxOffset)
+            }
         },
         animationSpec = TweenSpec(visibilityChangeDuration, 0, LinearEasing)
     )
@@ -72,42 +80,53 @@ fun Overlay(viewModel: OverlayViewModel, height: Dp, offsetCallback: (Int, Int) 
     val remainingVisibleHeight = abs(heightPx - (abs(offset)))
     offsetCallback(visibilityOffset.y, remainingVisibleHeight)
 
+    val cornerRadius = 25.dp
+    val backgroundShape = when(location){
+        OverlayLocation.Top -> RoundedCornerShape(bottomStart = cornerRadius, bottomEnd = cornerRadius)
+        OverlayLocation.Bottom -> RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius)
+    }
     Box(modifier = Modifier
         .offset { visibilityOffset }
         .requiredHeight(height)
         .background(
             color = backgroundColor,
-            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-        )
-        .padding(bottom = 20.dp)
-        .wrapContentWidth(unbounded = false)
-        .pointerInput(Unit) {
+            shape = backgroundShape,
+        ).pointerInput(Unit) {
             detectTapGestures(
                 onTap = { viewModel.onOverlayPressed() },
                 onLongPress = { viewModel.onOverlayLongPress() }
             )
-        }) {
+        }
+        .wrapContentWidth(unbounded = false)
+        ) {
         AnimatedVisibility(
             visible = visible,
             enter = fadeIn(),
             exit = fadeOut(),
         ) {
+            val rowAlignment = when(location){
+                OverlayLocation.Top -> Alignment.Top
+                OverlayLocation.Bottom -> Alignment.Bottom
+            }
             Row(
                 modifier = Modifier
-                    .fillMaxSize(),
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.Center,
+                    .fillMaxSize()
+                    .padding(horizontal = 9.dp)
+                    .padding(bottom = 5.dp),
+                verticalAlignment = rowAlignment,
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                val statCardModifier = Modifier.requiredWidth(130.dp)
+                val statCardModifier = Modifier.width(105.dp)
                 StatCard("Power", power, "watts", statCardModifier)
                 StatCard("Cadence", rpm, "rpm", statCardModifier)
                 LineChart(
                     data = powerGraph,
                     maxValue = 250f,
                     modifier = Modifier
-                        .requiredWidth(150.dp)
+                        .requiredWidth(120.dp)
                         .requiredHeight(100.dp)
-                        .padding(bottom = 10.dp),
+                        .padding(bottom = 10.dp)
+                        .padding(horizontal = 20.dp),
                     fillColor = Color(AndroidColor.parseColor("#FF3348")),
                     lineColor = Color(AndroidColor.parseColor("#D9182B")),
                 )

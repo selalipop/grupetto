@@ -5,7 +5,6 @@ import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
-import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -35,8 +34,8 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
     companion object {
         private const val OverlayServiceId = 2032
 
-        val OverlayWidthDp = 700.dp
-        val OverlayHeightDp = 110.dp
+        val OverlayWidthDp = 650.dp
+        val OverlayHeightDp = 100.dp
 
         //Increases the size of the touch target during the hidden state
         const val HiddenTouchTargetMarginPx = 20
@@ -65,7 +64,7 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
         val notificationManager = NotificationManagerCompat.from(this)
         startForeground(OverlayServiceId, prepareNotification(notificationManager))
 
-        buildDialog()
+        buildDialog(OverlayLocation.Bottom)
     }
 
     override fun onDestroy() {
@@ -90,7 +89,7 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
         return START_STICKY
     }
 
-    private fun buildDialog() {
+    private fun buildDialog(location: OverlayLocation) {
         val wm = getSystemService(WINDOW_SERVICE) as WindowManager
 
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -112,7 +111,7 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
             defaultFlags,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            gravity = location.gravity
         }
 
         val disabledTouchParams = LayoutParams().apply {
@@ -146,7 +145,8 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
             setContent {
                 Overlay(
                     overlayViewModel,
-                    OverlayHeightDp
+                    OverlayHeightDp,
+                    location
                 ) { offset, remainingVisibleHeight ->
                     /**
                      * Views attached directly to the window manager block all touches regardless
