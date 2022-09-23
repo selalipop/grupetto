@@ -39,8 +39,9 @@ val PowerChartWidth = 160.dp
 fun Overlay(
     viewModel: OverlayViewModel,
     height: Dp,
-    location: OverlayLocation,
-    dragCallback: (Int) -> Unit,
+    locationState: MutableState<OverlayLocation>,
+    horizontalDragCallback: (Int) -> Unit,
+    verticalDragCallback: (Int) -> Boolean,
     offsetCallback: (Int, Int) -> Unit
 ) {
     val placeholderText = "-"
@@ -54,7 +55,7 @@ fun Overlay(
     val speedLabel by viewModel.speedLabel.collectAsState(initial = "")
 
     val visible by viewModel.isVisible.collectAsState(initial = true)
-
+    val location by remember { locationState }
     val backgroundColor by animateColorAsState(
         if (visible) {
             Color(20, 20, 20)
@@ -87,7 +88,8 @@ fun Overlay(
     val remainingVisibleHeight = abs(heightPx - (abs(hideOffset)))
     offsetCallback(visibilityOffset.y, remainingVisibleHeight)
 
-    var dragOffset by remember { mutableStateOf(0f) }
+    var horizontalDragOffset by remember { mutableStateOf(0f) }
+    var verticalDragOffset by remember { mutableStateOf(0f) }
 
     val backgroundShape = when (location) {
         OverlayLocation.Top -> RoundedCornerShape(
@@ -115,8 +117,20 @@ fun Overlay(
         .draggable(
             orientation = Orientation.Horizontal,
             state = rememberDraggableState { delta ->
-                dragOffset += delta
-                dragCallback(dragOffset.roundToInt())
+                horizontalDragOffset += delta
+                horizontalDragCallback(horizontalDragOffset.roundToInt())
+            }
+        ).draggable(
+            orientation = Orientation.Vertical,
+            state = rememberDraggableState { delta ->
+                verticalDragOffset += delta
+                val shouldReset = verticalDragCallback(verticalDragOffset.roundToInt())
+                if(shouldReset){
+                    verticalDragOffset = 0f
+                }
+            },
+            onDragStopped = {
+                verticalDragOffset = 0f
             }
         )
         .wrapContentWidth(unbounded = false)

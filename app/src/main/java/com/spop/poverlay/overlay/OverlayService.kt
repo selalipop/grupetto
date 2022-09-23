@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.WindowManager.LayoutParams
 import android.widget.FrameLayout
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
@@ -47,6 +48,9 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
 
         //Increases the size of the touch target during the hidden state
         const val HiddenTouchTargetMarginPx = 20
+        //The percentage up or down a vertical drag must go before the overlay is relocated
+        //Defined relative to the height of the screen
+        const val VerticalMoveDragThreshold = .6f
     }
 
     private var lifecycleRegistry: LifecycleRegistry = LifecycleRegistry(this)
@@ -72,7 +76,7 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
         val notificationManager = NotificationManagerCompat.from(this)
         startForeground(OverlayServiceId, prepareNotification(notificationManager))
 
-        buildDialog(OverlayLocation.Bottom)
+        buildDialog()
     }
 
     override fun onDestroy() {
@@ -97,7 +101,8 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
         return START_STICKY
     }
 
-    private fun buildDialog(location: OverlayLocation) {
+    private fun buildDialog() {
+        val location = mutableStateOf(OverlayLocation.Bottom)
         val wm = getSystemService(WINDOW_SERVICE) as WindowManager
 
 
@@ -120,7 +125,7 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
             defaultFlags,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = location.gravity
+            gravity = location.value.gravity
         }
 
         val disabledTouchParams = LayoutParams().apply {
@@ -163,11 +168,30 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                             val overlayWidthPx =
                                 OverlayWidthDp.value * Resources.getSystem().displayMetrics.density
                             val screenWidth = resources.displayMetrics.widthPixels
-                            val dragRange =  ceil((screenWidth-overlayWidthPx) / 2).toInt()
+                            val dragRange = ceil((screenWidth - overlayWidthPx) / 2).toInt()
                             composeParams.x = offset.coerceIn(-dragRange, dragRange)
                         }
 
                         wm.updateViewLayout(this, composeParams)
+                    },
+                    { delta ->
+                        val screenHeight = resources.displayMetrics.heightPixels
+
+                        // If the user has dragged halfway up the screen, cancel the drag gesture and
+                        // toggle the location
+                        if (abs(delta) > screenHeight * VerticalMoveDragThreshold) {
+                            location.value = if (location.value == OverlayLocation.Bottom) {
+                                OverlayLocation.Top
+                            } else {
+                                OverlayLocation.Bottom
+                            }
+                            composeParams.gravity = location.value.gravity
+                            wm.updateViewLayout(this, composeParams)
+                            true // Reset the drag gesture as we've handled it
+                        } else {
+                            false // Continue drag gesture
+                        }
+
                     }
                 ) { offset, remainingVisibleHeight ->
                     /**
