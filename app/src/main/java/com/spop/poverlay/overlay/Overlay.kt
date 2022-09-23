@@ -125,6 +125,7 @@ fun Overlay(
                     verticalDragOffset = 0f
                 }
             )
+        }.pointerInput(Unit){
             detectTapGestures(
                 onTap = { viewModel.onOverlayPressed() },
                 onDoubleTap = { viewModel.onOverlayDoubleTap() }
