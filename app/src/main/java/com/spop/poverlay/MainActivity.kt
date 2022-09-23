@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
@@ -31,6 +32,13 @@ class MainActivity : ComponentActivity() {
         }
         viewModel.requestOverlayPermission.observe(this) {
             requestScreenPermission()
+        }
+        viewModel.infoPopup.observe(this){
+            Toast.makeText(
+                this,
+                it,
+                Toast.LENGTH_LONG
+            ).show()
         }
         setContent {
             PTONOverlayTheme {

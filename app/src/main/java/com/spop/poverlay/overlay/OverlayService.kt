@@ -113,7 +113,7 @@ class OverlayService : LifecycleEnabledService() {
             DummySensorInterface()
         }
 
-        val overlayViewModel = OverlayViewModel(
+        val overlayViewModel = OverlaySensorViewModel(
             this@OverlayService.application,
             sensorInterface
         )

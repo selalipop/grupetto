@@ -36,7 +36,7 @@ val PowerChartWidth = 160.dp
 
 @Composable
 fun Overlay(
-    viewModel: OverlayViewModel,
+    viewModel: OverlaySensorViewModel,
     height: Dp,
     locationState: MutableState<OverlayLocation>,
     horizontalDragCallback: (Int) -> Int,

@@ -20,7 +20,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 private const val MphToKph = 1.60934
 
-class OverlayViewModel(application: Application, private val sensorInterface: SensorInterface) :
+class OverlaySensorViewModel(application: Application, private val sensorInterface: SensorInterface) :
     AndroidViewModel(application) {
 
     companion object {
