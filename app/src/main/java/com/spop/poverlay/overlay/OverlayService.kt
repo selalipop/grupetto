@@ -1,6 +1,9 @@
 package com.spop.poverlay.overlay
 
-import android.app.*
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Intent
 import android.content.res.Resources
 import android.graphics.PixelFormat
@@ -13,19 +16,14 @@ import android.view.WindowManager.LayoutParams
 import android.widget.FrameLayout
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.lifecycle.*
-import androidx.savedstate.SavedStateRegistry
-import androidx.savedstate.SavedStateRegistryController
-import androidx.savedstate.SavedStateRegistryOwner
-import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.spop.poverlay.MainActivity
 import com.spop.poverlay.R
 import com.spop.poverlay.sensor.DummySensorInterface
 import com.spop.poverlay.sensor.PelotonV1SensorInterface
+import com.spop.poverlay.util.LifecycleEnabledService
 import timber.log.Timber
 import java.util.*
 import kotlin.math.abs
@@ -35,7 +33,7 @@ import kotlin.math.roundToInt
 
 private const val PelotonBrand = "Peloton"
 
-class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
+class OverlayService : LifecycleEnabledService() {
     companion object {
         private const val OverlayServiceId = 2032
 
@@ -44,7 +42,7 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
 
         //If the overlay is dragged within this many pixels of the center of the screen
         //snap to the center of the screen
-        val OverlayCenterSnapRangePx = 20
+        const val OverlayCenterSnapRangePx = 20
 
         //Increases the size of the touch target during the hidden state
         const val HiddenTouchTargetMarginPx = 20
@@ -54,43 +52,17 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
         const val VerticalMoveDragThreshold = .6f
     }
 
-    private var lifecycleRegistry: LifecycleRegistry = LifecycleRegistry(this)
-    override val savedStateRegistry: SavedStateRegistry
-        get() = savedState.savedStateRegistry
 
-    override fun getLifecycle(): Lifecycle {
-        return lifecycleRegistry
-    }
-
-
-    private fun handleLifecycleEvent(event: Lifecycle.Event) =
-        lifecycleRegistry.handleLifecycleEvent(event)
 
 
     override fun onCreate() {
         super.onCreate()
-        savedState.performRestore(null)
-        handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
-        handleLifecycleEvent(Lifecycle.Event.ON_START)
-        handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
 
         val notificationManager = NotificationManagerCompat.from(this)
         startForeground(OverlayServiceId, prepareNotification(notificationManager))
 
         buildDialog()
     }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-        handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-    }
-
-
-    private val store = ViewModelStore()
-    override fun getViewModelStore(): ViewModelStore = store
-
-    private val savedState = SavedStateRegistryController.create(this)
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
@@ -147,8 +119,7 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
         )
 
         val disabledTouchView = FrameLayout(this).apply {
-            ViewTreeLifecycleOwner.set(this, this@OverlayService)
-            ViewTreeViewModelStoreOwner.set(this, this@OverlayService)
+            lifecycleViaService()
             setOnClickListener {
                 overlayViewModel.onOverlayPressed()
             }
@@ -156,8 +127,7 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
         }
 
         val composeView = ComposeView(this).apply {
-            ViewTreeLifecycleOwner.set(this, this@OverlayService)
-            ViewTreeViewModelStoreOwner.set(this, this@OverlayService)
+            lifecycleViaService()
 
             setContent {
                 Overlay(
@@ -242,9 +212,6 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                     wm.updateViewLayout(this, composeParams)
                 }
             }
-
-            setViewTreeSavedStateRegistryOwner(this@OverlayService)
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             alpha = 0.9f
             isFocusable = false
             clipChildren = false
