@@ -23,8 +23,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.spop.poverlay.util.LineChart
-import kotlin.math.abs
-import kotlin.math.roundToInt
 import android.graphics.Color as AndroidColor
 
 //This is the percentage of the overlay that is offscreen when hidden
@@ -38,10 +36,10 @@ val PowerChartWidth = 160.dp
 fun Overlay(
     viewModel: OverlaySensorViewModel,
     height: Dp,
-    locationState: MutableState<OverlayLocation>,
-    horizontalDragCallback: (Int) -> Int,
-    verticalDragCallback: (Int) -> Boolean,
-    offsetCallback: (Int, Int) -> Unit
+    locationState: State<OverlayLocation>,
+    horizontalDragCallback: (Float) -> Float,
+    verticalDragCallback: (Float) -> Float,
+    offsetCallback: (Float, Float)->Unit
 ) {
     val placeholderText = "-"
 
@@ -83,9 +81,7 @@ fun Overlay(
         animationSpec = TweenSpec(VisibilityChangeDuration, 0, LinearEasing)
     )
 
-    val hideOffset = visibilityOffset.y
-    val remainingVisibleHeight = abs(heightPx - (abs(hideOffset)))
-    offsetCallback(visibilityOffset.y, remainingVisibleHeight)
+    offsetCallback(visibilityOffset.y.toFloat(), heightPx.toFloat())
 
     var horizontalDragOffset by remember { mutableStateOf(0f) }
     var verticalDragOffset by remember { mutableStateOf(0f) }
@@ -113,22 +109,21 @@ fun Overlay(
                     change.consume()
                     horizontalDragOffset += offset.x
                     horizontalDragOffset =
-                        horizontalDragCallback(horizontalDragOffset.roundToInt()).toFloat()
+                        horizontalDragCallback(horizontalDragOffset)
 
                     verticalDragOffset += offset.y
-                    val shouldReset = verticalDragCallback(verticalDragOffset.roundToInt())
-                    if (shouldReset) {
-                        verticalDragOffset = 0f
-                    }
+                    verticalDragOffset =
+                        verticalDragCallback(verticalDragOffset)
                 },
                 onDragEnd = {
                     verticalDragOffset = 0f
                 }
             )
-        }.pointerInput(Unit){
+        }
+        .pointerInput(Unit) {
             detectTapGestures(
                 onTap = { viewModel.onOverlayPressed() },
-                onDoubleTap = { viewModel.onOverlayDoubleTap() }
+                onLongPress = { viewModel.onOverlayDoubleTap() }
             )
         }
         .wrapContentWidth(unbounded = false)
