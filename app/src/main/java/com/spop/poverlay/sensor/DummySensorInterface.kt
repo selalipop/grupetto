@@ -8,11 +8,11 @@ import kotlin.time.Duration.Companion.milliseconds
 
 class DummySensorInterface : SensorInterface {
     override val power: Flow<Float>
-        get() = dummyValueFlow(100f)
+        get() = dummyValueFlow(200f)
     override val cadence: Flow<Float>
-        get() = dummyValueFlow(50f)
+        get() = dummyValueFlow(150f)
     override val resistance: Flow<Float>
-        get() = dummyValueFlow(100f)
+        get() = dummyValueFlow(110f)
 
 
     private fun dummyValueFlow(magnitude : Float) = flow {
