@@ -6,8 +6,11 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.WindowManager.LayoutParams
+import android.widget.FrameLayout
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
@@ -22,6 +25,7 @@ import com.spop.poverlay.sensor.DummySensorInterface
 import com.spop.poverlay.sensor.PelotonV1SensorInterface
 import timber.log.Timber
 import java.util.*
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 
@@ -30,7 +34,12 @@ private const val PelotonBrand = "Peloton"
 class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
     companion object {
         private const val OverlayServiceId = 2032
-        val OverlayWidthDp = 850.dp
+
+        val OverlayWidthDp = 700.dp
+        val OverlayHeightDp = 110.dp
+
+        //Increases the size of the touch target during the hidden state
+        const val HiddenTouchTargetMarginPx = 20
     }
 
     private var lifecycleRegistry: LifecycleRegistry = LifecycleRegistry(this)
@@ -91,11 +100,12 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
         }
 
         val widthPx = (OverlayWidthDp.value * resources.displayMetrics.density).roundToInt()
+
         val defaultFlags = (LayoutParams.FLAG_NOT_TOUCH_MODAL
                 or LayoutParams.FLAG_NOT_FOCUSABLE
-                or LayoutParams.FLAG_LAYOUT_NO_LIMITS
-                or LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH)
-        val params = LayoutParams(
+                or LayoutParams.FLAG_LAYOUT_NO_LIMITS)
+
+        val composeParams = LayoutParams(
             widthPx,
             LayoutParams.WRAP_CONTENT,
             layoutFlag,
@@ -105,25 +115,64 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
         }
 
+        val disabledTouchParams = LayoutParams().apply {
+            copyFrom(composeParams)
+        }
+
         val sensorInterface = if (Build.BRAND == PelotonBrand) {
             PelotonV1SensorInterface(this)
         } else {
             DummySensorInterface()
         }
-        val composeView = ComposeView(this).apply {
 
+        val overlayViewModel = OverlayViewModel(
+            this@OverlayService.application,
+            sensorInterface
+        )
+
+        val disabledTouchView = FrameLayout(this).apply {
+            ViewTreeLifecycleOwner.set(this, this@OverlayService)
+            ViewTreeViewModelStoreOwner.set(this, this@OverlayService)
+            setOnClickListener {
+                overlayViewModel.onOverlayPressed()
+            }
+            layoutParams = ViewGroup.LayoutParams(100, 100)
+        }
+
+        val composeView = ComposeView(this).apply {
             ViewTreeLifecycleOwner.set(this, this@OverlayService)
             ViewTreeViewModelStoreOwner.set(this, this@OverlayService)
 
             setContent {
                 Overlay(
-                    OverlayViewModel(
-                        this@OverlayService.application,
-                        sensorInterface
-                    )
-                ) { offset ->
-                    params.y = offset
-                    wm.updateViewLayout(this, params)
+                    overlayViewModel,
+                    OverlayHeightDp
+                ) { offset, remainingVisibleHeight ->
+                    /**
+                     * Views attached directly to the window manager block all touches regardless
+                     * of if there is content beneath them
+                     *
+                     * But changing the height of the ComposeView results in janky animations.
+                     *
+                     * This solution disables touches on the ComposeView when it hides
+                     * Then an invisible view appears to capture touches
+                     */
+                    val isHidden = abs(offset) > 0f
+                    disabledTouchView.visibility = if (isHidden) {
+                        View.VISIBLE
+                    } else {
+                        View.GONE
+                    }
+                    disabledTouchParams.height = remainingVisibleHeight + HiddenTouchTargetMarginPx
+                    wm.updateViewLayout(disabledTouchView, disabledTouchParams)
+
+                    composeParams.flags = if (isHidden) {
+                        defaultFlags or
+                                LayoutParams.FLAG_NOT_TOUCHABLE
+                    } else {
+                        defaultFlags
+                    }
+                    wm.updateViewLayout(this, composeParams)
                 }
             }
 
@@ -131,15 +180,12 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             alpha = 0.9f
             isFocusable = false
-            layoutParams = LayoutParams(
-                LayoutParams.WRAP_CONTENT,
-                LayoutParams.WRAP_CONTENT
-            )
             clipChildren = false
             clipToOutline = false
         }
 
-        wm.addView(composeView, params)
+        wm.addView(composeView, composeParams)
+        wm.addView(disabledTouchView, disabledTouchParams)
     }
 
 

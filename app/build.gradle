@@ -56,6 +56,7 @@ allprojects {
         kotlinOptions {
             freeCompilerArgs += [
                     "-Xopt-in=kotlin.ExperimentalUnsignedTypes",
+                    "-Xopt-in=androidx.compose.animation.ExperimentalAnimationApi",
                     "-Xopt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
                     "-Xopt-in=androidx.lifecycle.compose.ExperimentalLifecycleComposeApi",
                     "-Xopt-in=kotlinx.coroutines.FlowPreview",

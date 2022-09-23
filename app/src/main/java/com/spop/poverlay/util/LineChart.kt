@@ -27,7 +27,8 @@ fun LineChart(
         factory = { context ->
             LiveChart(context).apply {
                 layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
                 )
                 clipChildren = false
             }.setLiveChartStyle(LiveChartStyle().apply {
