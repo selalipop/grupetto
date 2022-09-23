@@ -35,12 +35,13 @@ const val VisibilityChangeDuration = 150
 val OverlayCornerRadius = 25.dp
 val StatCardWidth = 105.dp
 val PowerChartWidth = 160.dp
+
 @Composable
 fun Overlay(
     viewModel: OverlayViewModel,
     height: Dp,
     locationState: MutableState<OverlayLocation>,
-    horizontalDragCallback: (Int) -> Unit,
+    horizontalDragCallback: (Int) -> Int,
     verticalDragCallback: (Int) -> Boolean,
     offsetCallback: (Int, Int) -> Unit
 ) {
@@ -118,14 +119,16 @@ fun Overlay(
             orientation = Orientation.Horizontal,
             state = rememberDraggableState { delta ->
                 horizontalDragOffset += delta
-                horizontalDragCallback(horizontalDragOffset.roundToInt())
+                horizontalDragOffset =
+                    horizontalDragCallback(horizontalDragOffset.roundToInt()).toFloat()
             }
-        ).draggable(
+        )
+        .draggable(
             orientation = Orientation.Vertical,
             state = rememberDraggableState { delta ->
                 verticalDragOffset += delta
                 val shouldReset = verticalDragCallback(verticalDragOffset.roundToInt())
-                if(shouldReset){
+                if (shouldReset) {
                     verticalDragOffset = 0f
                 }
             },

@@ -48,6 +48,7 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
 
         //Increases the size of the touch target during the hidden state
         const val HiddenTouchTargetMarginPx = 20
+
         //The percentage up or down a vertical drag must go before the overlay is relocated
         //Defined relative to the height of the screen
         const val VerticalMoveDragThreshold = .6f
@@ -104,6 +105,8 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
     private fun buildDialog() {
         val location = mutableStateOf(OverlayLocation.Bottom)
         val wm = getSystemService(WINDOW_SERVICE) as WindowManager
+        val validHorizontalDragRange = calculateHorizontalDragRange()
+        val screenHeight = resources.displayMetrics.heightPixels
 
 
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -162,20 +165,35 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                     OverlayHeightDp,
                     location,
                     { offset ->
+                        var wasClamped = false
                         if (offset > -OverlayCenterSnapRangePx && offset < OverlayCenterSnapRangePx) {
                             composeParams.x = 0
                         } else {
-                            val overlayWidthPx =
-                                OverlayWidthDp.value * Resources.getSystem().displayMetrics.density
-                            val screenWidth = resources.displayMetrics.widthPixels
-                            val dragRange = ceil((screenWidth - overlayWidthPx) / 2).toInt()
-                            composeParams.x = offset.coerceIn(-dragRange, dragRange)
-                        }
+                            composeParams.x = offset.coerceIn(validHorizontalDragRange)
 
+                            if(!validHorizontalDragRange.contains(offset)){
+                                wasClamped = true
+                            }
+                        }
                         wm.updateViewLayout(this, composeParams)
+
+                        //Relocate hidden touch target as well
+                        disabledTouchParams.copyFrom(composeParams)
+                        wm.updateViewLayout(disabledTouchView, disabledTouchParams)
+                        /*
+                        If the drag gesture offset has fallen out of sync with composeParams, either
+                        a) the view as dragged too far off the screen and clamped to the side
+                        b) the view is being snapped to the center
+                        If it's being snapped, allow the gesture to continue
+                        Otherwise force the drag back into sync with the view position
+                        */
+                        if (wasClamped) {
+                            composeParams.x // Sync gesture to view location
+                        } else {
+                            offset // Continue gesture if snapped or synced
+                        }
                     },
                     { delta ->
-                        val screenHeight = resources.displayMetrics.heightPixels
 
                         // If the user has dragged halfway up the screen, cancel the drag gesture and
                         // toggle the location
@@ -187,6 +205,9 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                             }
                             composeParams.gravity = location.value.gravity
                             wm.updateViewLayout(this, composeParams)
+
+                            disabledTouchParams.copyFrom(composeParams)
+                            wm.updateViewLayout(disabledTouchView, disabledTouchParams)
                             true // Reset the drag gesture as we've handled it
                         } else {
                             false // Continue drag gesture
@@ -194,33 +215,6 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
 
                     }
                 ) { offset, remainingVisibleHeight ->
-                    /**
-                     * Views attached directly to the window manager block all touches regardless
-                     * of if there is content beneath them
-                     *
-                     * But changing the height of the ComposeView results in janky animations.
-                     *
-                     * This solution disables touches on the ComposeView when it hides
-                     * Then an invisible view appears to capture touches
-                     */
-                    /**
-                     * Views attached directly to the window manager block all touches regardless
-                     * of if there is content beneath them
-                     *
-                     * But changing the height of the ComposeView results in janky animations.
-                     *
-                     * This solution disables touches on the ComposeView when it hides
-                     * Then an invisible view appears to capture touches
-                     */
-                    /**
-                     * Views attached directly to the window manager block all touches regardless
-                     * of if there is content beneath them
-                     *
-                     * But changing the height of the ComposeView results in janky animations.
-                     *
-                     * This solution disables touches on the ComposeView when it hides
-                     * Then an invisible view appears to capture touches
-                     */
                     /**
                      * Views attached directly to the window manager block all touches regardless
                      * of if there is content beneath them
@@ -259,6 +253,14 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
 
         wm.addView(composeView, composeParams)
         wm.addView(disabledTouchView, disabledTouchParams)
+    }
+
+    private fun calculateHorizontalDragRange(): IntRange {
+        val overlayWidthPx =
+            OverlayWidthDp.value * Resources.getSystem().displayMetrics.density
+        val screenWidth = resources.displayMetrics.widthPixels
+        val dragRange = ceil((screenWidth - overlayWidthPx) / 2).toInt()
+        return -dragRange..dragRange
     }
 
 
