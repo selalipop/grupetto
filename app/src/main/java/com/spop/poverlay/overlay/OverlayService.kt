@@ -84,6 +84,7 @@ class OverlayService : LifecycleEnabledService() {
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             LayoutParams.TYPE_APPLICATION_OVERLAY
         } else {
+            @Suppress("DEPRECATION")
             LayoutParams.TYPE_SYSTEM_ALERT
         }
 
@@ -263,6 +264,7 @@ class OverlayService : LifecycleEnabledService() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 NotificationCompat.Builder(this, channelId)
             } else {
+                @Suppress("DEPRECATION")
                 NotificationCompat.Builder(this)
             }
 
