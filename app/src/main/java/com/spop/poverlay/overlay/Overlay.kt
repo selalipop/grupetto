@@ -1,12 +1,10 @@
 package com.spop.poverlay.overlay
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.TweenSpec
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntOffsetAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -16,11 +14,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.spop.poverlay.util.LineChart
 import android.graphics.Color as AndroidColor
@@ -30,7 +31,9 @@ const val PercentVisibleWhenHidden = .14f
 const val VisibilityChangeDuration = 150
 val OverlayCornerRadius = 25.dp
 val StatCardWidth = 105.dp
-val PowerChartWidth = 160.dp
+val PowerChartFullWidth = 200.dp
+val PowerChartShrunkWidth = 120.dp
+
 
 @Composable
 fun Overlay(
@@ -39,7 +42,8 @@ fun Overlay(
     locationState: State<OverlayLocation>,
     horizontalDragCallback: (Float) -> Float,
     verticalDragCallback: (Float) -> Float,
-    offsetCallback: (Float, Float)->Unit
+    offsetCallback: (Float, Float) -> Unit,
+    onLayout: (IntSize) -> Unit
 ) {
     val placeholderText = "-"
 
@@ -53,6 +57,9 @@ fun Overlay(
 
     val visible by viewModel.isVisible.collectAsState(initial = true)
     val location by remember { locationState }
+    val size = remember { mutableStateOf(IntSize.Zero) }
+    var shrinkChart by remember { mutableStateOf(false) }
+
     val backgroundColor by animateColorAsState(
         if (visible) {
             Color(20, 20, 20)
@@ -65,9 +72,14 @@ fun Overlay(
         (height * (1 - PercentVisibleWhenHidden)).roundToPx()
     }
 
-    val heightPx = with(LocalDensity.current) {
-        height.roundToPx()
-    }
+    val contentAlpha by animateFloatAsState(
+        if (visible) {
+            1f
+        } else {
+            0f
+        },
+        animationSpec = TweenSpec(VisibilityChangeDuration, 0, LinearEasing)
+    )
 
     val visibilityOffset by animateIntOffsetAsState(
         if (visible) {
@@ -81,7 +93,7 @@ fun Overlay(
         animationSpec = TweenSpec(VisibilityChangeDuration, 0, LinearEasing)
     )
 
-    offsetCallback(visibilityOffset.y.toFloat(), heightPx.toFloat())
+    offsetCallback(visibilityOffset.y.toFloat(), size.value.height.toFloat())
 
     var horizontalDragOffset by remember { mutableStateOf(0f) }
     var verticalDragOffset by remember { mutableStateOf(0f) }
@@ -99,6 +111,15 @@ fun Overlay(
     Box(modifier = Modifier
         .offset { visibilityOffset }
         .requiredHeight(height)
+        .wrapContentWidth(unbounded = true)
+        .onSizeChanged {
+            if (it.width != size.value.width ||
+                it.height != size.value.height
+            ) {
+                size.value = it
+                onLayout(size.value)
+            }
+        }
         .background(
             color = backgroundColor,
             shape = backgroundShape,
@@ -126,45 +147,56 @@ fun Overlay(
                 onLongPress = { viewModel.onOverlayDoubleTap() }
             )
         }
-        .wrapContentWidth(unbounded = false)
     ) {
-        AnimatedVisibility(
-            visible = visible,
-            enter = fadeIn(),
-            exit = fadeOut(),
+
+        val rowAlignment = when (location) {
+            OverlayLocation.Top -> Alignment.Top
+            OverlayLocation.Bottom -> Alignment.Bottom
+        }
+        Row(
+            modifier = Modifier
+                .wrapContentWidth(unbounded = true)
+                .padding(horizontal = 9.dp)
+                .padding(bottom = 5.dp)
+                .alpha(contentAlpha),
+            verticalAlignment = rowAlignment,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            val rowAlignment = when (location) {
-                OverlayLocation.Top -> Alignment.Top
-                OverlayLocation.Bottom -> Alignment.Bottom
+            val statCardModifier = Modifier.requiredWidth(StatCardWidth)
+
+            StatCard("Power", power, "watts", statCardModifier)
+
+            StatCard("Cadence", rpm, "rpm", statCardModifier)
+            val chartWidth = if (shrinkChart) {
+                PowerChartShrunkWidth
+            } else {
+                PowerChartFullWidth
             }
-            Row(
+            LineChart(
+                data = powerGraph,
+                maxValue = 250f,
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 9.dp)
-                    .padding(bottom = 5.dp),
-                verticalAlignment = rowAlignment,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                val statCardModifier = Modifier.width(StatCardWidth)
-                StatCard("Power", power, "watts", statCardModifier)
-                StatCard("Cadence", rpm, "rpm", statCardModifier)
-                LineChart(
-                    data = powerGraph,
-                    maxValue = 250f,
-                    modifier = Modifier
-                        .requiredWidth(PowerChartWidth)
-                        .requiredHeight(100.dp)
-                        .padding(bottom = 10.dp)
-                        .padding(horizontal = 5.dp),
-                    fillColor = Color(AndroidColor.parseColor("#FF3348")),
-                    lineColor = Color(AndroidColor.parseColor("#D9182B")),
-                )
-                StatCard("Resistance", resistance, "", statCardModifier)
-                StatCard("Speed", speed, speedLabel, statCardModifier.clickable {
-                    viewModel.onClickedSpeed()
-                })
-            }
+                    .requiredWidth(chartWidth)
+                    .requiredHeight(100.dp)
+                    .padding(horizontal = 15.dp)
+                    .padding(bottom = 10.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = { viewModel.onOverlayPressed() },
+                            onDoubleTap = { shrinkChart = !shrinkChart }
+                        )
+                    },
+                fillColor = Color(AndroidColor.parseColor("#FF3348")),
+                lineColor = Color(AndroidColor.parseColor("#D9182B")),
+            )
+            StatCard("Resistance", resistance, "", statCardModifier)
+
+            StatCard("Speed", speed, speedLabel, statCardModifier.clickable {
+                viewModel.onClickedSpeed()
+            })
+
         }
     }
-
 }
+
+

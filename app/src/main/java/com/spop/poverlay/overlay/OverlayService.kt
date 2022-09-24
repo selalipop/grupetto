@@ -8,12 +8,15 @@ import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
+import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.WindowManager.LayoutParams
 import android.widget.FrameLayout
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -23,6 +26,7 @@ import com.spop.poverlay.R
 import com.spop.poverlay.sensor.DummySensorInterface
 import com.spop.poverlay.sensor.PelotonV1SensorInterface
 import com.spop.poverlay.util.LifecycleEnabledService
+import com.spop.poverlay.util.disableAnimations
 import kotlinx.coroutines.flow.combine
 import timber.log.Timber
 import java.util.*
@@ -40,7 +44,6 @@ class OverlayService : LifecycleEnabledService() {
 
         private const val OverlayServiceId = 2032
 
-        val OverlayWidthDp = 650.dp
         val OverlayHeightDp = 100.dp
 
         //Increases the size of the touch target during the hidden state
@@ -99,22 +102,24 @@ class OverlayService : LifecycleEnabledService() {
             LayoutParams.TYPE_SYSTEM_ALERT
         }
 
-        val widthPx = (OverlayWidthDp.value * resources.displayMetrics.density).roundToInt()
 
         val defaultFlags = (LayoutParams.FLAG_NOT_TOUCH_MODAL
                 or LayoutParams.FLAG_NOT_FOCUSABLE
                 or LayoutParams.FLAG_LAYOUT_NO_LIMITS)
 
         val composeParams = LayoutParams(
-            widthPx,
+            screenSize.width.roundToInt(),
             LayoutParams.WRAP_CONTENT,
             layoutFlag,
             defaultFlags,
             PixelFormat.TRANSLUCENT
-        )
+        ).apply {
+            disableAnimations()
+        }
 
         val touchTargetParams = LayoutParams().apply {
             copyFrom(composeParams)
+            disableAnimations()
         }
 
         val touchTargetView = FrameLayout(this).apply {
@@ -122,10 +127,15 @@ class OverlayService : LifecycleEnabledService() {
             setOnClickListener {
                 sensorViewModel.onOverlayPressed()
             }
+            layoutParams = ViewGroup.LayoutParams(100, 100)
         }
 
         val overlayView = ComposeView(this).apply {
             lifecycleViaService()
+            setViewCompositionStrategy(
+                ViewCompositionStrategy
+                    .DisposeOnLifecycleDestroyed(this@OverlayService)
+            )
             setContent {
                 Overlay(
                     sensorViewModel,
@@ -133,18 +143,21 @@ class OverlayService : LifecycleEnabledService() {
                     dialogViewModel.dialogLocation.collectAsState(),
                     dialogViewModel::processHorizontalDrag,
                     dialogViewModel::processVerticalDrag,
-                    dialogViewModel::processHideProgress
+                    dialogViewModel::processHideProgress,
+                    dialogViewModel::onOverlayLayout
                 )
             }
             alpha = 0.9f
             isFocusable = false
+            clipToPadding = false
             clipChildren = false
             clipToOutline = false
         }
-
         wm.addView(overlayView, composeParams)
-        wm.addView(touchTargetView, touchTargetParams)
 
+        wm.addView(touchTargetView, touchTargetParams)
+        touchTargetView.clipChildren = false
+        touchTargetView.clipToPadding = false
         //Subscribe to Dialog view model and update views
         lifecycleScope.launchWhenResumed {
             combine(
@@ -153,7 +166,7 @@ class OverlayService : LifecycleEnabledService() {
                 dialogViewModel.partialOverlayFlags,
                 dialogViewModel.touchTargetHeight,
                 dialogViewModel.touchTargetVisiblity
-            ){ origin, gravity, overlayFlags, touchTargetHeight, touchTargetVisibility ->
+            ) { origin, gravity, overlayFlags, touchTargetHeight, touchTargetVisibility ->
                 composeParams.x = origin.x.roundToInt()
                 composeParams.y = origin.y.roundToInt()
                 composeParams.flags = DefaultOverlayFlags or overlayFlags
@@ -164,14 +177,25 @@ class OverlayService : LifecycleEnabledService() {
                 touchTargetParams.gravity = gravity
                 touchTargetParams.height = touchTargetHeight.roundToInt()
 
-                touchTargetView.visibility = touchTargetVisibility
-
+                touchTargetView.visibility = View.VISIBLE
+                disableClipOnParents(overlayView)
                 wm.updateViewLayout(overlayView, composeParams)
                 wm.updateViewLayout(touchTargetView, touchTargetParams)
-            }.collect{}
+            }.collect {}
         }
     }
 
+    fun disableClipOnParents(v: View) {
+        if (v.parent == null) {
+            return
+        }
+        if (v is ViewGroup) {
+            v.clipChildren = false
+        }
+        if (v.parent is View) {
+            disableClipOnParents(v.parent as View)
+        }
+    }
 
     private fun prepareNotification(notificationManager: NotificationManagerCompat): Notification {
         val channelId = UUID.randomUUID().toString()

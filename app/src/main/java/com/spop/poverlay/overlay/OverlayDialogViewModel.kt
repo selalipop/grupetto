@@ -1,10 +1,10 @@
 package com.spop.poverlay.overlay
 
-import android.content.res.Resources
 import android.view.View
 import android.view.WindowManager.LayoutParams
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -14,11 +14,11 @@ class OverlayDialogViewModel(private val screenSize: Size) {
     companion object {
         // If the overlay is dragged within this range of pixels from the center of the screen
         // snap to the center of the screen instead
-
         private val HorizontalDragSnapRange = -20f..20f
     }
 
     val dialogOrigin = MutableStateFlow(Offset.Zero)
+    val dialogSizeParams = MutableStateFlow(LayoutParams.WRAP_CONTENT to LayoutParams.WRAP_CONTENT)
     val partialOverlayFlags = MutableStateFlow(0)
     val touchTargetVisiblity = MutableStateFlow(View.GONE)
     val dialogLocation = MutableStateFlow(OverlayLocation.Bottom)
@@ -32,16 +32,18 @@ class OverlayDialogViewModel(private val screenSize: Size) {
     // - Overlay has FLAG_NOT_TOUCHABLE if it has started hiding
     // - Touch target height should match overlay height, plus margin for ease of use
     fun processHideProgress(hiddenHeight: Float, totalHeight: Float) {
+
         val remainingHeight = abs(totalHeight - (abs(hiddenHeight)))
         val isHidden = abs(hiddenHeight) > 0f
 
         if (isHidden) {
             touchTargetVisiblity.value = View.VISIBLE
+            touchTargetHeight.value = remainingHeight + OverlayService.HiddenTouchTargetMarginPx
         } else {
             touchTargetVisiblity.value = View.GONE
+            touchTargetHeight.value = 0f
         }
 
-        touchTargetHeight.value = remainingHeight + OverlayService.HiddenTouchTargetMarginPx
 
         partialOverlayFlags.value = if (isHidden) {
             LayoutParams.FLAG_NOT_TOUCHABLE
@@ -74,8 +76,12 @@ class OverlayDialogViewModel(private val screenSize: Size) {
             }
         }
     }
-
-    private val horizontalDragScreenRange = calculateHorizontalDragScreenRange()
+    fun onOverlayLayout(size : IntSize){
+        horizontalDragScreenRange = calculateHorizontalDragScreenRange(size.width)
+        val (_, currentHeight) = dialogSizeParams.value
+        dialogSizeParams.value = size.width to currentHeight
+    }
+    private var horizontalDragScreenRange = calculateHorizontalDragScreenRange(0)
 
     // Takes the current vertical progress of a drag and returns a new progress
     // - Reset the progress to 0 and move the view once drag is halfway across screen
@@ -100,13 +106,8 @@ class OverlayDialogViewModel(private val screenSize: Size) {
     }
 
 
-    private fun calculateHorizontalDragScreenRange(): ClosedFloatingPointRange<Float> {
-        val overlayWidthPx =
-            OverlayService.OverlayWidthDp.value * Resources
-                .getSystem()
-                .displayMetrics.density
-
-        val dragRange = ceil((screenSize.width - overlayWidthPx) / 2).toInt()
+    private fun calculateHorizontalDragScreenRange(overlayWidthPx : Int): ClosedFloatingPointRange<Float> {
+        val dragRange = ceil((screenSize.width - overlayWidthPx) / 2f).toInt()
         return -dragRange.toFloat()..dragRange.toFloat()
     }
 
