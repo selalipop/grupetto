@@ -51,7 +51,7 @@ class OverlaySensorViewModel(application: Application, private val sensorInterfa
        }
     }
 
-    fun onTimerDoubleTap(){
+    fun onTimerLongPress(){
         if(timerEnabled.value){
             stopTimer()
         }else{

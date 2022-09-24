@@ -5,13 +5,11 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntOffsetAsState
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,12 +18,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.*
-import com.spop.poverlay.R
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.spop.poverlay.overlay.composables.OverlayMainContent
-import com.spop.poverlay.ui.theme.LatoFontFamily
+import com.spop.poverlay.overlay.composables.OverlayTimer
 
 //This is the percentage of the overlay that is offscreen when hidden
 const val PercentVisibleWhenHidden = .00f
@@ -77,7 +76,7 @@ fun Overlay(
     )
 
     val timerAlpha by animateFloatAsState(
-        if (visible) 1f else .2f,
+        if (visible) 1f else .5f,
         animationSpec = TweenSpec(VisibilityChangeDuration, 0, LinearEasing)
     )
 
@@ -105,20 +104,27 @@ fun Overlay(
             topStart = OverlayCornerRadius, topEnd = OverlayCornerRadius
         )
     }
-    Column(
-        modifier = Modifier
-            .wrapContentSize()
-            .offset { visibilityOffset },
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        OverlayTimer(timerAlpha,
-            timerLabel,
-            { viewModel.onTimerTap() },
-            { viewModel.onTimerDoubleTap() }
+    val contentIndex = when (location) {
+        OverlayLocation.Top -> -1f
+        OverlayLocation.Bottom -> 1f
+    }
+    val timer = @Composable {
+        OverlayTimer(
+            isExpanded = !visible,
+            location= location,
+            powerLabel = power,
+            timerAlpha = timerAlpha,
+            timerLabel = timerLabel,
+            cadenceLabel = rpm,
+            speedLabel = speed,
+            onTap = { viewModel.onTimerTap() },
+            onLongPress = { viewModel.onTimerLongPress() }
         )
-
+    }
+    val mainContent = @Composable{
         Box(modifier = Modifier
             .requiredHeight(height)
+            .zIndex(contentIndex)
             .wrapContentWidth(unbounded = true)
             .onSizeChanged {
                 if (it.width != size.value.width || it.height != size.value.height) {
@@ -168,55 +174,24 @@ fun Overlay(
                 onChartClicked = { viewModel.onOverlayPressed() })
         }
     }
-
-}
-
-@Composable
-private fun OverlayTimer(
-    timerAlpha: Float,
-    timerLabel: String,
-    onTap: () -> Unit,
-    onDoubleTap: () -> Unit
-) {
-    Row(
+    Column(
         modifier = Modifier
-            .alpha(timerAlpha)
             .wrapContentSize()
-            .background(
-                color = BackgroundColorDefault,
-                shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-            )
-            .width(100.dp)
-            .padding(horizontal = 10.dp)
-            .padding(top = 1.dp)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = {
-                        onTap()
-                    },
-                    onDoubleTap = {
-                        onDoubleTap()
-                    }
-                )
-            },
-        horizontalArrangement = Arrangement.SpaceAround,
-        verticalAlignment = Alignment.CenterVertically
+            .offset { visibilityOffset },
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Image(
-            modifier = Modifier
-                .height(20.dp)
-                .fillMaxWidth(.2f),
-            painter = painterResource(id = R.drawable.ic_timer),
-            contentDescription = null,
-        )
-        Text(
-            timerLabel,
-            color = Color.White,
-            fontFamily = LatoFontFamily,
-            fontSize = 19.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth(.9f)
-        )
+
+        when(location){
+            OverlayLocation.Top -> {
+                mainContent()
+                timer()
+            }
+            OverlayLocation.Bottom -> {
+                timer()
+                mainContent()
+            }
+        }
+
     }
+
 }
