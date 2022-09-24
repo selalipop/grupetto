@@ -172,13 +172,18 @@ fun Overlay(
             } else {
                 PowerChartFullWidth
             }
+            val chartPadding = if (shrinkChart) {
+                15.dp
+            } else {
+                8.dp
+            }
             LineChart(
                 data = powerGraph,
                 maxValue = 250f,
                 modifier = Modifier
                     .requiredWidth(chartWidth)
                     .requiredHeight(100.dp)
-                    .padding(horizontal = 15.dp)
+                    .padding(horizontal = chartPadding)
                     .padding(bottom = 10.dp)
                     .pointerInput(Unit) {
                         detectTapGestures(
