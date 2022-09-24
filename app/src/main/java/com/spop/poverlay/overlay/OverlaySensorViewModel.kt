@@ -2,6 +2,7 @@ package com.spop.poverlay.overlay
 
 import android.app.Application
 import android.content.Intent
+import android.text.format.DateUtils
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,13 +10,11 @@ import com.spop.poverlay.MainActivity
 import com.spop.poverlay.sensor.SensorInterface
 import com.spop.poverlay.util.tickerFlow
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 
 private const val MphToKph = 1.60934
@@ -43,6 +42,53 @@ class OverlaySensorViewModel(application: Application, private val sensorInterfa
             startActivity(intent)
         }
     }
+
+    fun onTimerTap(){
+       if(timerEnabled.value){
+           toggleTimer()
+       }else{
+           resumeTimer()
+       }
+    }
+
+    fun onTimerDoubleTap(){
+        if(timerEnabled.value){
+            stopTimer()
+        }else{
+            resumeTimer()
+        }
+    }
+
+    private fun stopTimer() {
+        timerEnabled.value = false
+    }
+
+    private fun resumeTimer() {
+        timerPaused = false
+        timerEnabled.value = true
+    }
+
+    private val timerEnabled = MutableStateFlow(false)
+    val timerLabel = timerEnabled.flatMapLatest {
+        if(it){
+            tickerFlow(period = 1.seconds)
+                .filter { !timerPaused }
+                .runningFold(0L){acc, _ -> acc + 1L}
+                .map { seconds ->
+                    DateUtils.formatElapsedTime(seconds)
+                }
+        }else{
+            flow{
+                emit("‒ ‒:‒ ‒")
+            }
+        }
+    }
+
+    private fun toggleTimer() {
+        timerPaused = !timerPaused
+    }
+
+    private var timerPaused = false
 
     private var useMph = MutableStateFlow(true)
 
