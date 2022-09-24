@@ -47,9 +47,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background,
                 ) {
                     ConfigurationPage(
-                        viewModel.showPermissionInfo,
-                        viewModel::onGrantPermissionClicked,
-                        viewModel::onStartServiceClicked
+                        viewModel
                     )
                 }
             }

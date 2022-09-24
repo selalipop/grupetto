@@ -16,6 +16,9 @@ class ConfigurationViewModel(application: Application) : AndroidViewModel(applic
     val requestOverlayPermission = MutableLiveData<Unit>()
     val showPermissionInfo = mutableStateOf(false)
     val infoPopup = MutableLiveData<String>()
+    private val configuration = ConfigurationRepository(application)
+
+    val showTimerWhenMinimized = configuration.showTimerWhenMinimized
 
     init {
         updatePermissionState()
@@ -28,7 +31,9 @@ class ConfigurationViewModel(application: Application) : AndroidViewModel(applic
             showPermissionInfo.value = false
         }
     }
-
+    fun onShowTimerWhenMinimizedClicked(isChecked : Boolean){
+        configuration.setShowTimerWhenMinimized(isChecked)
+    }
     fun onStartServiceClicked() {
         Timber.i("Starting service")
         ContextCompat.startForegroundService(

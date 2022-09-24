@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.lifecycleScope
+import com.spop.poverlay.ConfigurationRepository
 import com.spop.poverlay.MainActivity
 import com.spop.poverlay.R
 import com.spop.poverlay.sensor.DummySensorInterface
@@ -90,7 +91,8 @@ class OverlayService : LifecycleEnabledService() {
 
         val sensorViewModel = OverlaySensorViewModel(
             this@OverlayService.application,
-            sensorInterface
+            sensorInterface,
+            ConfigurationRepository(this)
         )
 
         val dialogViewModel = OverlayDialogViewModel(screenSize)

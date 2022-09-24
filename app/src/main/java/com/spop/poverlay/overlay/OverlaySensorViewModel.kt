@@ -6,6 +6,7 @@ import android.text.format.DateUtils
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.spop.poverlay.ConfigurationRepository
 import com.spop.poverlay.MainActivity
 import com.spop.poverlay.sensor.SensorInterface
 import com.spop.poverlay.util.tickerFlow
@@ -19,7 +20,11 @@ import kotlin.time.Duration.Companion.seconds
 
 private const val MphToKph = 1.60934
 
-class OverlaySensorViewModel(application: Application, private val sensorInterface: SensorInterface) :
+class OverlaySensorViewModel(
+    application: Application,
+    private val sensorInterface: SensorInterface,
+    configurationRepository: ConfigurationRepository
+) :
     AndroidViewModel(application) {
 
     companion object {
@@ -29,9 +34,10 @@ class OverlaySensorViewModel(application: Application, private val sensorInterfa
         //Max number of points before data starts to shift
         const val GraphMaxDataPoints = 300
     }
-
+    val showTimerWhenMinimized = configurationRepository.showTimerWhenMinimized
     private val mutableIsVisible = MutableStateFlow(true)
     val isVisible = mutableIsVisible.asStateFlow()
+
     fun onOverlayPressed() {
         mutableIsVisible.apply { value = !value }
     }
@@ -43,18 +49,18 @@ class OverlaySensorViewModel(application: Application, private val sensorInterfa
         }
     }
 
-    fun onTimerTap(){
-       if(timerEnabled.value){
-           toggleTimer()
-       }else{
-           resumeTimer()
-       }
+    fun onTimerTap() {
+        if (timerEnabled.value) {
+            toggleTimer()
+        } else {
+            resumeTimer()
+        }
     }
 
-    fun onTimerLongPress(){
-        if(timerEnabled.value){
+    fun onTimerLongPress() {
+        if (timerEnabled.value) {
             stopTimer()
-        }else{
+        } else {
             resumeTimer()
         }
     }
@@ -70,15 +76,15 @@ class OverlaySensorViewModel(application: Application, private val sensorInterfa
 
     private val timerEnabled = MutableStateFlow(false)
     val timerLabel = timerEnabled.flatMapLatest {
-        if(it){
+        if (it) {
             tickerFlow(period = 1.seconds)
                 .filter { !timerPaused }
-                .runningFold(0L){acc, _ -> acc + 1L}
+                .runningFold(0L) { acc, _ -> acc + 1L }
                 .map { seconds ->
                     DateUtils.formatElapsedTime(seconds)
                 }
-        }else{
-            flow{
+        } else {
+            flow {
                 emit("‒ ‒:‒ ‒")
             }
         }

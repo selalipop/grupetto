@@ -26,7 +26,8 @@ import com.spop.poverlay.ui.theme.LatoFontFamily
 
 @Composable
  fun OverlayTimer(
-    isExpanded: Boolean,
+    isMinimized: Boolean,
+    showTimerWhenMinimized: Boolean,
     location: OverlayLocation,
     powerLabel: String,
     cadenceLabel: String,
@@ -36,7 +37,7 @@ import com.spop.poverlay.ui.theme.LatoFontFamily
     onTap: () -> Unit,
     onLongPress: () -> Unit
 ) {
-    val backgroundShape = if (isExpanded){
+    val backgroundShape = if (isMinimized){
         RoundedCornerShape(8.dp)
     }else{
         when(location){
@@ -44,7 +45,7 @@ import com.spop.poverlay.ui.theme.LatoFontFamily
             OverlayLocation.Bottom -> RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
         }
     }
-    val expandedVerticalPadding = if(isExpanded){
+    val expandedVerticalPadding = if(isMinimized){
         1.dp
     }else{
         0.dp
@@ -74,12 +75,15 @@ import com.spop.poverlay.ui.theme.LatoFontFamily
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        OverlayTimerField(
-            modifier = Modifier.width(80.dp),
-            timerLabel = timerLabel,
-            icon = painterResource(id = R.drawable.ic_timer)
-        )
-        if (isExpanded) {
+        if(!isMinimized || showTimerWhenMinimized){
+            OverlayTimerField(
+                modifier = Modifier.width(80.dp),
+                timerLabel = timerLabel,
+                icon = painterResource(id = R.drawable.ic_timer)
+            )
+        }
+
+        if (isMinimized) {
             Spacer(modifier = Modifier.width(4.dp))
             OverlayTimerField(
                 modifier = Modifier.width(56.dp),

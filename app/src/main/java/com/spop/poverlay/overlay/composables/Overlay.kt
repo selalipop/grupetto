@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.spop.poverlay.overlay.composables.OverlayMainContent
 import com.spop.poverlay.overlay.composables.OverlayTimer
 
@@ -109,8 +110,13 @@ fun Overlay(
         OverlayLocation.Bottom -> 1f
     }
     val timer = @Composable {
+        val showTimerWhenMinimized by viewModel.showTimerWhenMinimized.collectAsStateWithLifecycle(
+            initialValue = true,
+        )
+
         OverlayTimer(
-            isExpanded = !visible,
+            isMinimized = !visible,
+            showTimerWhenMinimized = showTimerWhenMinimized,
             location= location,
             powerLabel = power,
             timerAlpha = timerAlpha,
