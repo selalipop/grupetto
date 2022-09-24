@@ -183,7 +183,7 @@ fun Overlay(
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onTap = { viewModel.onOverlayPressed() },
-                            onDoubleTap = { shrinkChart = !shrinkChart }
+                            onLongPress = { shrinkChart = !shrinkChart }
                         )
                     },
                 fillColor = Color(AndroidColor.parseColor("#FF3348")),
