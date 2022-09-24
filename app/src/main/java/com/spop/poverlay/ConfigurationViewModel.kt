@@ -11,14 +11,17 @@ import androidx.lifecycle.MutableLiveData
 import com.spop.poverlay.overlay.OverlayService
 import timber.log.Timber
 
-class ConfigurationViewModel(application: Application) : AndroidViewModel(application) {
+class ConfigurationViewModel(
+    application: Application,
+    private val configurationRepository: ConfigurationRepository
+) : AndroidViewModel(application) {
     val finishActivity = MutableLiveData<Unit>()
     val requestOverlayPermission = MutableLiveData<Unit>()
     val showPermissionInfo = mutableStateOf(false)
     val infoPopup = MutableLiveData<String>()
-    private val configuration = ConfigurationRepository(application)
 
-    val showTimerWhenMinimized = configuration.showTimerWhenMinimized
+    //val showTimerWhenMinimized = configuration.showTimerWhenMinimized
+    val showTimerWhenMinimized = configurationRepository.showTimerWhenMinimized
 
     init {
         updatePermissionState()
@@ -31,9 +34,11 @@ class ConfigurationViewModel(application: Application) : AndroidViewModel(applic
             showPermissionInfo.value = false
         }
     }
-    fun onShowTimerWhenMinimizedClicked(isChecked : Boolean){
-        configuration.setShowTimerWhenMinimized(isChecked)
+
+    fun onShowTimerWhenMinimizedClicked(isChecked: Boolean) {
+        configurationRepository.setShowTimerWhenMinimized(isChecked)
     }
+
     fun onStartServiceClicked() {
         Timber.i("Starting service")
         ContextCompat.startForegroundService(

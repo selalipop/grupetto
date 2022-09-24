@@ -31,8 +31,8 @@ fun ConfigurationPage(
         if (showPermissionInfo) {
             PermissionPage(viewModel::onGrantPermissionClicked)
         } else {
-            val timerShownWhenMinimized by
-            viewModel.showTimerWhenMinimized.collectAsStateWithLifecycle(
+            val timerShownWhenMinimized by viewModel.showTimerWhenMinimized
+                .collectAsStateWithLifecycle(
                 initialValue = true
             )
             StartServicePage(

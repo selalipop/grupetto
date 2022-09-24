@@ -25,7 +25,7 @@ import com.spop.poverlay.ui.theme.LatoFontFamily
 
 
 @Composable
- fun OverlayTimer(
+ fun OverlayMinimizedContent(
     isMinimized: Boolean,
     showTimerWhenMinimized: Boolean,
     location: OverlayLocation,

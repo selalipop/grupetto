@@ -10,7 +10,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
-import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -22,11 +21,11 @@ import com.spop.poverlay.ui.theme.PTONOverlayTheme
 
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: ConfigurationViewModel by viewModels()
+    private lateinit var viewModel: ConfigurationViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        viewModel = ConfigurationViewModel(application, ConfigurationRepository(applicationContext))
         viewModel.finishActivity.observe(this) {
             finish()
         }

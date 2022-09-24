@@ -90,9 +90,9 @@ class OverlayService : LifecycleEnabledService() {
         }
 
         val sensorViewModel = OverlaySensorViewModel(
-            this@OverlayService.application,
+            application,
             sensorInterface,
-            ConfigurationRepository(this)
+            ConfigurationRepository(applicationContext)
         )
 
         val dialogViewModel = OverlayDialogViewModel(screenSize)
@@ -236,7 +236,7 @@ class OverlayService : LifecycleEnabledService() {
             }
 
         notificationBuilder
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setOnlyAlertOnce(true)
             .setOngoing(true)

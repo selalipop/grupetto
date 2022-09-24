@@ -26,6 +26,7 @@ fun OverlayMainContent(
     resistance: String,
     speed: String,
     speedLabel: String,
+    pauseChart : Boolean,
     onSpeedClicked : ()->Unit,
     onChartClicked : ()->Unit
 ) {
@@ -53,6 +54,7 @@ fun OverlayMainContent(
         LineChart(
             data = powerGraph,
             maxValue = 250f,
+            pauseChart = pauseChart,
             modifier = Modifier
                 .requiredWidth(chartWidth)
                 .requiredHeight(100.dp)

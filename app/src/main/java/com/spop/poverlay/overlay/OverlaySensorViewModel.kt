@@ -10,10 +10,12 @@ import com.spop.poverlay.ConfigurationRepository
 import com.spop.poverlay.MainActivity
 import com.spop.poverlay.sensor.SensorInterface
 import com.spop.poverlay.util.tickerFlow
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -35,6 +37,14 @@ class OverlaySensorViewModel(
         const val GraphMaxDataPoints = 300
     }
     val showTimerWhenMinimized = configurationRepository.showTimerWhenMinimized
+    init {
+        CoroutineScope(Dispatchers.IO).launch {
+            showTimerWhenMinimized.collect{
+                Timber.i("ovm $it")
+            }
+        }
+    }
+
     private val mutableIsVisible = MutableStateFlow(true)
     val isVisible = mutableIsVisible.asStateFlow()
 
@@ -150,7 +160,6 @@ class OverlaySensorViewModel(
                     }
                 }
             }
-
         }
     }
 

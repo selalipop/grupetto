@@ -1,6 +1,5 @@
 package com.spop.poverlay.overlay
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.animateFloatAsState
@@ -13,7 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -22,10 +20,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.spop.poverlay.overlay.composables.OverlayMainContent
-import com.spop.poverlay.overlay.composables.OverlayTimer
+import com.spop.poverlay.overlay.composables.OverlayMinimizedContent
+import kotlinx.coroutines.flow.onEach
+import timber.log.Timber
 
 //This is the percentage of the overlay that is offscreen when hidden
 const val PercentVisibleWhenHidden = .00f
@@ -35,7 +34,6 @@ val StatCardWidth = 105.dp
 val PowerChartFullWidth = 200.dp
 val PowerChartShrunkWidth = 120.dp
 val BackgroundColorDefault = Color(20, 20, 20)
-val BackgroundColorHidden = Color(252, 93, 72)
 
 @Composable
 fun Overlay(
@@ -49,32 +47,34 @@ fun Overlay(
 ) {
     val placeholderText = "-"
 
-    val power by viewModel.powerValue.collectAsState(initial = placeholderText)
+    val power by viewModel.powerValue.collectAsStateWithLifecycle(initialValue = placeholderText)
 
     val powerGraph = remember { viewModel.powerGraph }
-    val rpm by viewModel.rpmValue.collectAsState(initial = placeholderText)
-    val resistance by viewModel.resistanceValue.collectAsState(initial = placeholderText)
-    val speed by viewModel.speedValue.collectAsState(initial = placeholderText)
-    val speedLabel by viewModel.speedLabel.collectAsState(initial = "")
-    val timerLabel by viewModel.timerLabel.collectAsState(initial = "")
+    val rpm by viewModel.rpmValue.collectAsStateWithLifecycle(initialValue = placeholderText)
+    val resistance by viewModel.resistanceValue.collectAsStateWithLifecycle(initialValue = placeholderText)
+    val speed by viewModel.speedValue.collectAsStateWithLifecycle(initialValue = placeholderText)
+    val speedLabel by viewModel.speedLabel.collectAsStateWithLifecycle(initialValue = "")
+    val timerLabel by viewModel.timerLabel.collectAsStateWithLifecycle(initialValue = "")
 
-    val visible by viewModel.isVisible.collectAsState(initial = true)
+    var pauseChart by remember { mutableStateOf(true) }
+
+    val visibleFlow = remember {
+        viewModel.isVisible.onEach {
+            // If the visibility change used an animator, pause the graph
+            // This improves animation performance drastically
+            val isAnimatedVisibilityChange = pauseChart != it
+            pauseChart = isAnimatedVisibilityChange
+        }
+    }
+
+        val visible by visibleFlow.collectAsStateWithLifecycle(initialValue = true)
     val location by remember { locationState }
     val size = remember { mutableStateOf(IntSize.Zero) }
 
-    val backgroundColor by animateColorAsState(
-        if (visible) BackgroundColorDefault else BackgroundColorHidden,
-        animationSpec = TweenSpec(VisibilityChangeDuration, 0)
-    )
 
     val maxOffset = with(LocalDensity.current) {
         (height * (1 - PercentVisibleWhenHidden)).roundToPx()
     }
-
-    val contentAlpha by animateFloatAsState(
-        if (visible) 1f else 0f,
-        animationSpec = TweenSpec(VisibilityChangeDuration, 0, LinearEasing)
-    )
 
     val timerAlpha by animateFloatAsState(
         if (visible) 1f else .5f,
@@ -89,7 +89,11 @@ fun Overlay(
                 OverlayLocation.Top -> IntOffset(0, -maxOffset)
                 OverlayLocation.Bottom -> IntOffset(0, maxOffset)
             }
-        }, animationSpec = TweenSpec(VisibilityChangeDuration, 0, LinearEasing)
+        },
+        animationSpec = TweenSpec(VisibilityChangeDuration, 0, LinearEasing),
+        finishedListener = {
+            pauseChart = false
+        }
     )
 
     offsetCallback(visibilityOffset.y.toFloat(), size.value.height.toFloat())
@@ -105,19 +109,19 @@ fun Overlay(
             topStart = OverlayCornerRadius, topEnd = OverlayCornerRadius
         )
     }
-    val contentIndex = when (location) {
-        OverlayLocation.Top -> -1f
-        OverlayLocation.Bottom -> 1f
-    }
     val timer = @Composable {
-        val showTimerWhenMinimized by viewModel.showTimerWhenMinimized.collectAsStateWithLifecycle(
-            initialValue = true,
-        )
+        val showTimerWhenMinimizedFlow = remember{
+            viewModel.showTimerWhenMinimized.onEach {
+                Timber.i("Show Timer: $it")
+            }
+        }
+        val showTimerWhenMinimized by showTimerWhenMinimizedFlow
+            .collectAsStateWithLifecycle(initialValue = true)
 
-        OverlayTimer(
+        OverlayMinimizedContent(
             isMinimized = !visible,
             showTimerWhenMinimized = showTimerWhenMinimized,
-            location= location,
+            location = location,
             powerLabel = power,
             timerAlpha = timerAlpha,
             timerLabel = timerLabel,
@@ -127,10 +131,9 @@ fun Overlay(
             onLongPress = { viewModel.onTimerLongPress() }
         )
     }
-    val mainContent = @Composable{
+    val mainContent = @Composable {
         Box(modifier = Modifier
             .requiredHeight(height)
-            .zIndex(contentIndex)
             .wrapContentWidth(unbounded = true)
             .onSizeChanged {
                 if (it.width != size.value.width || it.height != size.value.height) {
@@ -139,7 +142,7 @@ fun Overlay(
                 }
             }
             .background(
-                color = backgroundColor,
+                color = BackgroundColorDefault,
                 shape = backgroundShape,
             )
             .pointerInput(Unit) {
@@ -167,11 +170,11 @@ fun Overlay(
             OverlayMainContent(modifier = Modifier
                 .wrapContentWidth(unbounded = true)
                 .padding(horizontal = 9.dp)
-                .padding(bottom = 5.dp)
-                .alpha(contentAlpha),
+                .padding(bottom = 5.dp),
                 rowAlignment = rowAlignment,
                 power = power,
                 rpm = rpm,
+                pauseChart = pauseChart,
                 powerGraph = powerGraph,
                 resistance = resistance,
                 speed = speed,
@@ -187,7 +190,7 @@ fun Overlay(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        when(location){
+        when (location) {
             OverlayLocation.Top -> {
                 mainContent()
                 timer()

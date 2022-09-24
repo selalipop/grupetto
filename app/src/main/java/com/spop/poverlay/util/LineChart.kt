@@ -18,10 +18,12 @@ fun LineChart(
     data: Collection<Number>,
     maxValue: Float,
     modifier: Modifier,
+    pauseChart: Boolean,
     fillColor: Color = Color.LightGray,
     lineColor: Color = Color.DarkGray,
 ) {
     val graph = remember { data }
+
     AndroidView(
         modifier = modifier,
         factory = { context ->
@@ -45,22 +47,27 @@ fun LineChart(
 
         },
         update = { view ->
-            view.setDataset(Dataset(graph.mapIndexed { index, value ->
-                //Start values at 1f to keep line visible at all times
-                DataPoint(index.toFloat(), value.toFloat().coerceIn(1f, maxValue))
-            }.toMutableList()))
-                .setSecondDataset(
-                    //There's no way to set explicit bounds with this graphing library
-                    //This hidden dataset forces the graph to cover the given bounds
-                    Dataset(
-                        mutableListOf(
-                            DataPoint(0f, 0f),
-                            DataPoint(OverlaySensorViewModel.GraphMaxDataPoints.toFloat(), maxValue)
+            if (!pauseChart) {
+                view.setDataset(Dataset(graph.mapIndexed { index, value ->
+                    //Start values at 1f to keep line visible at all times
+                    DataPoint(index.toFloat(), value.toFloat().coerceIn(1f, maxValue))
+                }.toMutableList()))
+                    .setSecondDataset(
+                        //There's no way to set explicit bounds with this graphing library
+                        //This hidden dataset forces the graph to cover the given bounds
+                        Dataset(
+                            mutableListOf(
+                                DataPoint(0f, 0f),
+                                DataPoint(
+                                    OverlaySensorViewModel.GraphMaxDataPoints.toFloat(),
+                                    maxValue
+                                )
+                            )
                         )
                     )
-                )
-                .drawFill(withGradient = true)
-                .drawDataset()
+                    .drawFill(withGradient = true)
+                    .drawDataset()
+            }
         }
     )
 }
