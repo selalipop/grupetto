@@ -47,11 +47,11 @@ class OverlayService : LifecycleEnabledService() {
         val OverlayHeightDp = 100.dp
 
         //Increases the size of the touch target during the hidden state
-        const val HiddenTouchTargetMarginPx = 20
+        const val HiddenTouchTargetMarginPx = 40
 
         //The percentage up or down a vertical drag must go before the overlay is relocated
         //Defined relative to the height of the screen
-        const val VerticalMoveDragThreshold = .6f
+        const val VerticalMoveDragThreshold = .5f
     }
 
 
