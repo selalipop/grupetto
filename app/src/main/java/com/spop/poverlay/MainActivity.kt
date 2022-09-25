@@ -25,14 +25,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        viewModel = ConfigurationViewModel(application, ConfigurationRepository(applicationContext))
+        viewModel =
+            ConfigurationViewModel(application, ConfigurationRepository(applicationContext, this))
         viewModel.finishActivity.observe(this) {
             finish()
         }
         viewModel.requestOverlayPermission.observe(this) {
             requestScreenPermission()
         }
-        viewModel.infoPopup.observe(this){
+        viewModel.infoPopup.observe(this) {
             Toast.makeText(
                 this,
                 it,

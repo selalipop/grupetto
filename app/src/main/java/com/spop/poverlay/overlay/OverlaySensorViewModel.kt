@@ -10,25 +10,24 @@ import com.spop.poverlay.ConfigurationRepository
 import com.spop.poverlay.MainActivity
 import com.spop.poverlay.sensor.SensorInterface
 import com.spop.poverlay.util.tickerFlow
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import timber.log.Timber
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 
 private const val MphToKph = 1.60934
 
+//For a yet unknown reason, removing val from configurationRepository breaks the class.
+@Suppress("CanBeParameter")
 class OverlaySensorViewModel(
     application: Application,
     private val sensorInterface: SensorInterface,
-    configurationRepository: ConfigurationRepository
+    private val configurationRepository: ConfigurationRepository
 ) :
     AndroidViewModel(application) {
-
     companion object {
         //The sensor does not necessarily return new value this quickly
         val GraphUpdatePeriod = 200.milliseconds
@@ -36,14 +35,9 @@ class OverlaySensorViewModel(
         //Max number of points before data starts to shift
         const val GraphMaxDataPoints = 300
     }
-    val showTimerWhenMinimized = configurationRepository.showTimerWhenMinimized
-    init {
-        CoroutineScope(Dispatchers.IO).launch {
-            showTimerWhenMinimized.collect{
-                Timber.i("ovm $it")
-            }
-        }
-    }
+
+    val showTimerWhenMinimized
+        get() = configurationRepository.showTimerWhenMinimized
 
     private val mutableIsVisible = MutableStateFlow(true)
     val isVisible = mutableIsVisible.asStateFlow()

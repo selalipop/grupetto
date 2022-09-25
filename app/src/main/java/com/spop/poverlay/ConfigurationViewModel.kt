@@ -20,8 +20,8 @@ class ConfigurationViewModel(
     val showPermissionInfo = mutableStateOf(false)
     val infoPopup = MutableLiveData<String>()
 
-    //val showTimerWhenMinimized = configuration.showTimerWhenMinimized
-    val showTimerWhenMinimized = configurationRepository.showTimerWhenMinimized
+    val showTimerWhenMinimized
+        get() = configurationRepository.showTimerWhenMinimized
 
     init {
         updatePermissionState()

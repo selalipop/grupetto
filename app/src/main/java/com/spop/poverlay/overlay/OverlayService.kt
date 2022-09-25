@@ -74,7 +74,6 @@ class OverlayService : LifecycleEnabledService() {
         Timber.i("overlay service received intent")
         return START_STICKY
     }
-
     private fun buildDialog() {
         val wm = getSystemService(WINDOW_SERVICE) as WindowManager
         val screenSize = Size(
@@ -88,11 +87,10 @@ class OverlayService : LifecycleEnabledService() {
         } else {
             DummySensorInterface()
         }
-
         val sensorViewModel = OverlaySensorViewModel(
             application,
             sensorInterface,
-            ConfigurationRepository(applicationContext)
+            ConfigurationRepository(applicationContext, this)
         )
 
         val dialogViewModel = OverlayDialogViewModel(screenSize)
