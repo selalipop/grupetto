@@ -20,6 +20,8 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.spop.poverlay.ConfigurationRepository
 import com.spop.poverlay.MainActivity
@@ -74,6 +76,7 @@ class OverlayService : LifecycleEnabledService() {
         Timber.i("overlay service received intent")
         return START_STICKY
     }
+
     private fun buildDialog() {
         val wm = getSystemService(WINDOW_SERVICE) as WindowManager
         val screenSize = Size(
@@ -83,7 +86,13 @@ class OverlayService : LifecycleEnabledService() {
 
 
         val sensorInterface = if (Build.BRAND == PelotonBrand) {
-            PelotonV1SensorInterface(this)
+            PelotonV1SensorInterface(this).also {
+                lifecycle.addObserver(object : DefaultLifecycleObserver {
+                    override fun onDestroy(owner: LifecycleOwner) {
+                        it.stop()
+                    }
+                })
+            }
         } else {
             DummySensorInterface()
         }
