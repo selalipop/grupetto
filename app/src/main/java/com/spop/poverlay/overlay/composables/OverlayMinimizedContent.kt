@@ -1,6 +1,7 @@
 package com.spop.poverlay.overlay.composables
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -25,34 +26,35 @@ import com.spop.poverlay.ui.theme.LatoFontFamily
 
 
 @Composable
- fun OverlayMinimizedContent(
+fun OverlayMinimizedContent(
     isMinimized: Boolean,
     showTimerWhenMinimized: Boolean,
     location: OverlayLocation,
     powerLabel: String,
     cadenceLabel: String,
     speedLabel: String,
-    timerAlpha: Float,
+    contentAlpha: Float,
     timerLabel: String,
+    timerPaused: Boolean,
     onTap: () -> Unit,
     onLongPress: () -> Unit
 ) {
-    val backgroundShape = if (isMinimized){
+    val backgroundShape = if (isMinimized) {
         RoundedCornerShape(8.dp)
-    }else{
-        when(location){
+    } else {
+        when (location) {
             OverlayLocation.Top -> RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)
             OverlayLocation.Bottom -> RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
         }
     }
-    val expandedVerticalPadding = if(isMinimized){
+    val expandedVerticalPadding = if (isMinimized) {
         1.dp
-    }else{
+    } else {
         0.dp
     }
     Row(
         modifier = Modifier
-            .alpha(timerAlpha)
+            .alpha(contentAlpha)
             .wrapContentSize()
             .padding(vertical = expandedVerticalPadding)
             .background(
@@ -75,9 +77,26 @@ import com.spop.poverlay.ui.theme.LatoFontFamily
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if(!isMinimized || showTimerWhenMinimized){
+        val infiniteTransition = rememberInfiniteTransition()
+        if (!isMinimized || showTimerWhenMinimized || timerPaused) {
+
+            val timerAlpha = if (timerPaused) {
+                infiniteTransition.animateFloat(
+                    initialValue = 1f,
+                    targetValue = 0.6f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(500, easing = LinearEasing),
+                        repeatMode = RepeatMode.Reverse
+                    )
+                ).value
+            } else {
+                1f
+            }
+
             OverlayTimerField(
-                modifier = Modifier.width(80.dp),
+                modifier = Modifier
+                    .width(80.dp)
+                    .alpha(timerAlpha),
                 timerLabel = timerLabel,
                 icon = painterResource(id = R.drawable.ic_timer)
             )
@@ -121,7 +140,7 @@ private fun OverlayTimerField(
             modifier = Modifier
                 .requiredHeight(20.dp)
                 .requiredWidth(16.dp)
-                .padding(vertical=4.dp),
+                .padding(vertical = 4.dp),
             painter = icon,
             contentDescription = null,
         )

@@ -55,6 +55,7 @@ fun Overlay(
     val speed by viewModel.speedValue.collectAsStateWithLifecycle(initialValue = placeholderText)
     val speedLabel by viewModel.speedLabel.collectAsStateWithLifecycle(initialValue = "")
     val timerLabel by viewModel.timerLabel.collectAsStateWithLifecycle(initialValue = "")
+    val isTimerPaused by viewModel.timerPaused.collectAsStateWithLifecycle(initialValue = false)
 
     var pauseChart by remember { mutableStateOf(true) }
 
@@ -120,10 +121,11 @@ fun Overlay(
 
         OverlayMinimizedContent(
             isMinimized = !visible,
+            timerPaused = isTimerPaused,
             showTimerWhenMinimized = showTimerWhenMinimized,
             location = location,
             powerLabel = power,
-            timerAlpha = timerAlpha,
+            contentAlpha = timerAlpha,
             timerLabel = timerLabel,
             cadenceLabel = rpm,
             speedLabel = speed,

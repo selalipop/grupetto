@@ -71,18 +71,21 @@ class OverlaySensorViewModel(
 
     private fun stopTimer() {
         timerEnabled.value = false
+        mutableTimerPaused.value = false
     }
 
     private fun resumeTimer() {
-        timerPaused = false
+        mutableTimerPaused.value = false
         timerEnabled.value = true
     }
 
     private val timerEnabled = MutableStateFlow(false)
+    private val mutableTimerPaused = MutableStateFlow(false)
+    val timerPaused = mutableTimerPaused.asSharedFlow()
     val timerLabel = timerEnabled.flatMapLatest {
         if (it) {
             tickerFlow(period = 1.seconds)
-                .filter { !timerPaused }
+                .filter { !mutableTimerPaused.value }
                 .runningFold(0L) { acc, _ -> acc + 1L }
                 .map { seconds ->
                     DateUtils.formatElapsedTime(seconds)
@@ -95,10 +98,9 @@ class OverlaySensorViewModel(
     }
 
     private fun toggleTimer() {
-        timerPaused = !timerPaused
+        mutableTimerPaused.value = !mutableTimerPaused.value
     }
 
-    private var timerPaused = false
 
     private var useMph = MutableStateFlow(true)
 
