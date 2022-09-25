@@ -19,7 +19,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.lifecycleScope
 import com.spop.poverlay.ui.theme.PTONOverlayTheme
 
-
 class MainActivity : ComponentActivity() {
     private lateinit var viewModel: ConfigurationViewModel
 

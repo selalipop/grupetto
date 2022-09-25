@@ -2,8 +2,8 @@ package com.spop.poverlay.sensor
 
 import android.content.Context
 import android.os.IBinder
-import com.spop.poverlay.util.KalmanSmoothFactor
 import com.spop.poverlay.util.smooth
+import com.spop.poverlay.util.windowed
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import timber.log.Timber
@@ -49,7 +49,11 @@ class PelotonV1SensorInterface(context: Context) : SensorInterface, CoroutineSco
             resistanceSensor.sensorValue
         }
             .mapV1SensorToFloat()
-            .smooth(sensorNoise = KalmanSmoothFactor.Minimal)
+            .windowed(2,1,true){ readings ->
+                // Resistance sensor occasionally spikes for a single reading
+                // So take the lesser of the last two readings
+                readings.minOf { it }
+            }
 
     private fun Flow<Result<Float?>>.mapV1SensorToFloat() =
         filterNotNull()
