@@ -107,7 +107,7 @@ class OverlayDialogViewModel(private val screenSize: Size) {
 
 
     private fun calculateHorizontalDragScreenRange(overlayWidthPx : Int): ClosedFloatingPointRange<Float> {
-        val dragRange = ceil((screenSize.width - overlayWidthPx) / 2f).toInt()
+        val dragRange = abs(ceil((screenSize.width - overlayWidthPx) / 2f).toInt())
         return -dragRange.toFloat()..dragRange.toFloat()
     }
 
