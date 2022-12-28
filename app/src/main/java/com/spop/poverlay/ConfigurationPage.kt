@@ -2,6 +2,7 @@ package com.spop.poverlay
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -14,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.spop.poverlay.ui.theme.ErrorColor
 import com.spop.poverlay.ui.theme.LatoFontFamily
 
 
@@ -33,12 +35,13 @@ fun ConfigurationPage(
         } else {
             val timerShownWhenMinimized by viewModel.showTimerWhenMinimized
                 .collectAsStateWithLifecycle(
-                initialValue = true
-            )
+                    initialValue = true
+                )
             StartServicePage(
                 timerShownWhenMinimized,
                 viewModel::onShowTimerWhenMinimizedClicked,
-                viewModel::onStartServiceClicked
+                viewModel::onStartServiceClicked,
+                viewModel::onRestartClicked
             )
         }
     }
@@ -48,7 +51,8 @@ fun ConfigurationPage(
 private fun StartServicePage(
     timerShownWhenMinimized: Boolean,
     onTimerShownWhenMinimizedToggled: (Boolean) -> Unit,
-    onClickedStartOverlay: () -> Unit
+    onClickedStartOverlay: () -> Unit,
+    onClickedRestartApp: () -> Unit
 ) {
     Text(
         text = "Grupetto: An overlay for your Peloton bike",
@@ -64,7 +68,7 @@ private fun StartServicePage(
         fontStyle = FontStyle.Italic,
         fontWeight = FontWeight.Bold
     )
-    Spacer(modifier = Modifier.height(10.dp))
+    Spacer(modifier = Modifier.height(100.dp))
     Button(
         onClick = onClickedStartOverlay
     ) {
@@ -72,18 +76,34 @@ private fun StartServicePage(
             text = "Click here to start the overlay",
             fontFamily = LatoFontFamily,
             fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
             fontStyle = FontStyle.Italic,
         )
     }
-    Spacer(modifier = Modifier.height(20.dp))
-    Row (verticalAlignment = Alignment.CenterVertically){
+    Spacer(modifier = Modifier.height(40.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = "Show Elapsed Time When Minimized?",
             fontFamily = LatoFontFamily,
             fontSize = 20.sp,
             fontStyle = FontStyle.Italic,
         )
-        Checkbox(checked = timerShownWhenMinimized, onCheckedChange = onTimerShownWhenMinimizedToggled)
+        Checkbox(
+            checked = timerShownWhenMinimized,
+            onCheckedChange = onTimerShownWhenMinimizedToggled
+        )
+    }
+    Spacer(modifier = Modifier.height(100.dp))
+    Button(
+        onClick = onClickedRestartApp,
+        colors = ButtonDefaults.buttonColors(containerColor = ErrorColor),
+        ) {
+        Text(
+            text = "Restart Grupetto",
+            fontFamily = LatoFontFamily,
+            fontSize = 20.sp,
+            fontStyle = FontStyle.Italic,
+        )
     }
 }
 

@@ -17,6 +17,7 @@ class ConfigurationViewModel(
 ) : AndroidViewModel(application) {
     val finishActivity = MutableLiveData<Unit>()
     val requestOverlayPermission = MutableLiveData<Unit>()
+    val requestRestart = MutableLiveData<Unit>()
     val showPermissionInfo = mutableStateOf(false)
     val infoPopup = MutableLiveData<String>()
 
@@ -52,6 +53,9 @@ class ConfigurationViewModel(
         requestOverlayPermission.value = Unit
     }
 
+    fun onRestartClicked() {
+        requestRestart.value = Unit
+    }
     fun onResume() {
         updatePermissionState()
     }
