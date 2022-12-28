@@ -10,30 +10,86 @@ import com.spop.poverlay.ConfigurationRepository
 import com.spop.poverlay.MainActivity
 import com.spop.poverlay.sensor.SensorInterface
 import com.spop.poverlay.util.tickerFlow
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.selects.whileSelect
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 
 private const val MphToKph = 1.60934
 
-//For a yet unknown reason, removing val from configurationRepository breaks the class.
-@Suppress("CanBeParameter")
+
 class OverlaySensorViewModel(
     application: Application,
     private val sensorInterface: SensorInterface,
     private val configurationRepository: ConfigurationRepository
 ) :
-    AndroidViewModel(application) {
+    AndroidViewModel(application), CoroutineScope {
+    override val coroutineContext = SupervisorJob()
+    private val resetTimeoutChannel = Channel<Unit>()
+
+    init {
+        addCloseable {
+            coroutineContext.cancel()
+        }
+        setupTimeoutReset()
+        setupDeadSensorDetection()
+    }
+
+    private fun setupTimeoutReset() {
+        launch(Dispatchers.IO) {
+            sensorInterface.power.collect {
+                resetTimeoutChannel.trySend(Unit)
+            }
+        }
+        launch(Dispatchers.IO) {
+            sensorInterface.resistance.collect {
+                resetTimeoutChannel.trySend(Unit)
+            }
+        }
+        launch(Dispatchers.IO) {
+            sensorInterface.cadence.collect {
+                resetTimeoutChannel.trySend(Unit)
+            }
+        }
+    }
+
+    /**
+     * When the Bike is left on for a few days, occasionally the system stops being able to
+     */
+    private fun setupDeadSensorDetection() {
+        launch(Dispatchers.IO) {
+            whileSelect {
+                resetTimeoutChannel.onReceive {
+                    true // Continue checking for a dead sensor
+                }
+
+                onTimeout(DeadSensorTimeout.inWholeMilliseconds) {
+                    mutableErrorMessage
+                        .tryEmit(
+                            "The sensors seem to have stopped responding," +
+                                    " you may need to restart the bike by removing " +
+                                    " power momentarily"
+                        )
+                    false
+                }
+
+            }
+
+        }
+    }
+
     companion object {
-        //The sensor does not necessarily return new value this quickly
+        // The sensor does not necessarily return new value this quickly
         val GraphUpdatePeriod = 200.milliseconds
 
-        //Max number of points before data starts to shift
+        // Max number of points before data starts to shift
         const val GraphMaxDataPoints = 300
+
+        // Max time between sensor updates before the user is shown the dead sensor message
+        val DeadSensorTimeout = 15.seconds
     }
 
     val showTimerWhenMinimized
@@ -41,6 +97,13 @@ class OverlaySensorViewModel(
 
     private val mutableIsVisible = MutableStateFlow(true)
     val isVisible = mutableIsVisible.asStateFlow()
+
+    private val mutableErrorMessage = MutableStateFlow<String?>(null)
+    val errorMessage = mutableErrorMessage.asStateFlow()
+
+    fun onDismissErrorPressed(){
+        mutableErrorMessage.tryEmit(null)
+    }
 
     fun onOverlayPressed() {
         mutableIsVisible.apply { value = !value }

@@ -9,6 +9,9 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,6 +23,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.spop.poverlay.overlay.composables.OverlayMainContent
 import com.spop.poverlay.overlay.composables.OverlayMinimizedContent
@@ -56,6 +60,7 @@ fun Overlay(
     val speedLabel by viewModel.speedLabel.collectAsStateWithLifecycle(initialValue = "")
     val timerLabel by viewModel.timerLabel.collectAsStateWithLifecycle(initialValue = "")
     val isTimerPaused by viewModel.timerPaused.collectAsStateWithLifecycle(initialValue = false)
+    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle(initialValue = null)
 
     var pauseChart by remember { mutableStateOf(true) }
 
@@ -68,7 +73,7 @@ fun Overlay(
         }
     }
 
-        val visible by visibleFlow.collectAsStateWithLifecycle(initialValue = true)
+    val visible by visibleFlow.collectAsStateWithLifecycle(initialValue = true)
     val location by remember { locationState }
     val size = remember { mutableStateOf(IntSize.Zero) }
 
@@ -111,7 +116,7 @@ fun Overlay(
         )
     }
     val timer = @Composable {
-        val showTimerWhenMinimizedFlow = remember{
+        val showTimerWhenMinimizedFlow = remember {
             viewModel.showTimerWhenMinimized.onEach {
                 Timber.i("Show Timer: $it")
             }
@@ -163,6 +168,23 @@ fun Overlay(
                 detectTapGestures(onTap = { viewModel.onOverlayPressed() },
                     onLongPress = { viewModel.onOverlayDoubleTap() })
             }) {
+
+            errorMessage?.let {
+                Snackbar(
+                    action = {
+                        Button(onClick = { viewModel.onDismissErrorPressed() }) {
+                            Text("Dismiss")
+                        }
+                    },
+                    containerColor = Color.White,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .zIndex(1f)
+                ) {
+                    Text(it, color = Color.Black)
+                }
+            }
+
 
             val rowAlignment = when (location) {
                 OverlayLocation.Top -> Alignment.Top

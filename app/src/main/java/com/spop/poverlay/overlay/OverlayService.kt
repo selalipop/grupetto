@@ -55,6 +55,9 @@ class OverlayService : LifecycleEnabledService() {
         //The percentage up or down a vertical drag must go before the overlay is relocated
         //Defined relative to the height of the screen
         const val VerticalMoveDragThreshold = .5f
+
+        // Replace with DeadSensorInterface to simulate a dead sensor
+        val EmulatorSensorInterface = DummySensorInterface()
     }
 
 
@@ -94,7 +97,7 @@ class OverlayService : LifecycleEnabledService() {
                 })
             }
         } else {
-            DummySensorInterface()
+            EmulatorSensorInterface
         }
         val sensorViewModel = OverlaySensorViewModel(
             application,
