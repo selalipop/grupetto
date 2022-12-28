@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.lifecycleScope
+import com.spop.poverlay.releases.ReleaseChecker
 import com.spop.poverlay.ui.theme.PTONOverlayTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +34,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         viewModel =
-            ConfigurationViewModel(application, ConfigurationRepository(applicationContext, this))
+            ConfigurationViewModel(
+                application, ConfigurationRepository(applicationContext, this),
+                ReleaseChecker()
+            )
         viewModel.finishActivity.observe(this) {
             finish()
         }
@@ -75,7 +79,7 @@ class MainActivity : ComponentActivity() {
         )
             .apply { setGravity(Gravity.CENTER, 0, 0) }
             .show()
-        
+
         CoroutineScope(Dispatchers.IO).launch {
             delay(1500L)
             val pm: PackageManager = applicationContext.packageManager
