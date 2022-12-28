@@ -5,10 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 import timber.log.Timber
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -26,6 +22,14 @@ suspend fun getBinder(context: Context) = suspendCoroutine<IBinder> { ctx ->
                 }else{
                     ctx.resume(iBinder)
                 }
+            }
+
+            override fun onBindingDied(name: ComponentName?) {
+                super.onBindingDied(name)
+                Timber.i("sensor service binding died $name")
+            }
+            override fun onNullBinding(name: ComponentName?) {
+                Timber.i("sensor service null binding $name")
             }
 
             override fun onServiceDisconnected(p0: ComponentName?) {
