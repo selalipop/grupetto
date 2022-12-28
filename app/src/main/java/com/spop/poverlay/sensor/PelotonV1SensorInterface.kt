@@ -2,7 +2,8 @@ package com.spop.poverlay.sensor
 
 import android.content.Context
 import android.os.IBinder
-import com.spop.poverlay.util.smooth
+import com.spop.poverlay.util.KalmanFilter
+import com.spop.poverlay.util.KalmanSmoothFactor
 import com.spop.poverlay.util.windowed
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -67,4 +68,21 @@ class PelotonV1SensorInterface(context: Context) : SensorInterface, CoroutineSco
             }
             .filterNotNull()
 
+    private fun Flow<Float>.smooth(
+        processNoise: Float = 5f,
+        sensorNoise: KalmanSmoothFactor = KalmanSmoothFactor.Normal,
+        estimatedError: Float = 20f
+    ): Flow<Float> {
+        var secondsSinceLastNonZeroMs = 0L
+        val kalmanFilter = KalmanFilter(processNoise, sensorNoise, estimatedError)
+        return map {
+            if(it > 0f){
+                secondsSinceLastNonZeroMs = System.currentTimeMillis()
+            }
+            // The longer the value has gone without an update, the more quickly the Kalman filter
+            // must respond, so increase it over time
+            kalmanFilter.processNoise = processNoise + (secondsSinceLastNonZeroMs / 100000L)
+            kalmanFilter.update(it)
+        }
+    }
 }
