@@ -1,5 +1,6 @@
 package com.spop.poverlay
 
+import android.os.Build
 import android.text.format.DateUtils
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
@@ -120,6 +121,7 @@ private fun StartServicePage(
         }
     }
 
+
     Spacer(modifier = Modifier.height(40.dp))
     Button(
         onClick = onClickedRestartApp,
@@ -132,6 +134,14 @@ private fun StartServicePage(
             color = Color.White
         )
     }
+    Spacer(modifier = Modifier.height(10.dp))
+
+    Text(
+        "Device: ${Build.DEVICE}\t" +
+                "SDK: ${Build.VERSION.RELEASE}\t" +
+                "OS Version: ${Build.FINGERPRINT}\t",
+        color = LocalContentColor.current.copy(alpha = .5f)
+    )
 }
 
 @Composable
