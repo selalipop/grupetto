@@ -4,6 +4,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import timber.log.Timber
 
+/**
+ * For simulating a dead sensor on the Bike, will not return any values
+ */
 class DeadSensorInterface : SensorInterface {
     override val power: Flow<Float>
         get() = flow { }

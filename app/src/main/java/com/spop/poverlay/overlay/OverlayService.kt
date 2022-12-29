@@ -37,7 +37,6 @@ import java.util.*
 import kotlin.math.roundToInt
 
 
-
 class OverlayService : LifecycleEnabledService() {
     companion object {
         private const val DefaultOverlayFlags = (LayoutParams.FLAG_NOT_TOUCH_MODAL

@@ -67,7 +67,7 @@ class OverlaySensorViewModel(
         }
     }
 
-    fun onDeadSensor() {
+    private fun onDeadSensor() {
         mutableErrorMessage
             .tryEmit(
                 "The sensors seem to have stopped responding," +
