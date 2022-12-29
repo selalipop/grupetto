@@ -8,10 +8,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
 import com.spop.poverlay.overlay.OverlayService
 import com.spop.poverlay.releases.Release
 import com.spop.poverlay.releases.ReleaseChecker
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -66,14 +66,15 @@ class ConfigurationViewModel(
         requestRestart.value = Unit
     }
 
-    fun onClickedRelease(release: Release){
+    fun onClickedRelease(release: Release) {
         val browserIntent = Intent(Intent.ACTION_VIEW, release.url)
         getApplication<Application>().startActivity(browserIntent)
     }
 
     fun onResume() {
         updatePermissionState()
-        CoroutineScope(Dispatchers.IO).launch {
+
+        viewModelScope.launch(Dispatchers.IO) {
             releaseChecker.getLatestRelease()
                 .onSuccess { release ->
                     latestRelease.value = release

@@ -15,7 +15,8 @@ class ConfigurationRepository(context: Context, lifecycleOwner: LifecycleOwner) 
 
     companion object {
         const val SharedPrefsName = "configuration"
-        // This workaround is required since SharedPreferences only stores weak references to objects
+        // This workaround is required since SharedPreferences
+        // only stores weak references to objects
         val SharedPreferenceListeners =
             mutableListOf<SharedPreferences.OnSharedPreferenceChangeListener>()
     }

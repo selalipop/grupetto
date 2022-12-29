@@ -6,6 +6,9 @@ import kotlinx.coroutines.flow.flow
 import kotlin.math.sin
 import kotlin.time.Duration.Companion.milliseconds
 
+/**
+ * Used to generate fake data on the emulator, creates a sin wave of values
+ */
 class DummySensorInterface : SensorInterface {
     override val power: Flow<Float>
         get() = dummyValueFlow(200f)

@@ -3,30 +3,47 @@ package com.spop.poverlay.sensor
 import android.os.IBinder
 import timber.log.Timber
 
-private const val SpuriousReadingThreshold = 40
-private const val SpuriousReadingDelta = 100
-private const val SpuriousReadingMaxRejections = 30
-
+/**
+ * At low power values the sensor can sometimes send huge spikes in values returned
+ *
+ * These spikes are referred to as "Spurious Readings" in this implementation, and rejected
+ */
 class PowerSensor(binder: IBinder) : RepeatingFloatV1Sensor(Command.GetPowerRepeating, binder) {
-    var lastSensorPower = 0f
+    companion object {
+        // Spurious readings tend to happen at low power values,
+        // so only we only reject values when power is below
+        private const val SpuriousReadingThreshold = 40
+
+        // How large of an increase between two reported values
+        // is needed before a reading is rejected
+        private const val SpuriousReadingDelta = 100
+
+        // Max number of consecutive readings that will be rejected
+        // Accounts for cases where sensor data really *is* spiking up and down
+        private const val SpuriousReadingMaxRejections = 30
+    }
+
+    var lastReading = 0f
     var consecutiveRejections = 0
 
     override fun mapFloat(value: Float): Float {
-        val power = value / 10f
+        val currentReading = value / 10f
+        val isRejected =
+            if (lastReading > SpuriousReadingThreshold ||
+                consecutiveRejections > SpuriousReadingMaxRejections) {
+                false
+            } else {
+                currentReading - lastReading > SpuriousReadingDelta
+            }
 
-        //At low speeds the sensor occasionally sends an incorrect spike in values
-        //This filters for such cases
-        return if (lastSensorPower < SpuriousReadingThreshold
-            && power - lastSensorPower > SpuriousReadingDelta
-            && consecutiveRejections < SpuriousReadingMaxRejections
-        ) {
+        return if (isRejected) {
             consecutiveRejections++
-            Timber.w("Ignoring spurious sensor data #$consecutiveRejections, $power")
-            lastSensorPower
+            Timber.w("Ignoring spurious sensor data #$consecutiveRejections, $currentReading")
+            lastReading
         } else {
             consecutiveRejections = 0
-            lastSensorPower = power
-            power
+            lastReading = currentReading
+            currentReading
         }
     }
 }

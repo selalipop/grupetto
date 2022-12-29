@@ -5,7 +5,6 @@ import androidx.core.os.bundleOf
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 import java.util.*
 
@@ -14,7 +13,13 @@ import java.util.*
  * And receiving a result on a HandlerThread
  */
 abstract class Sensor<T>(private val command: Command, private val binder: IBinder) {
+    companion object{
+        // Each request should have a unique ID that represents it
+        const val RequestIdBundleKey = "requestId"
+    }
+
     private val sensorThread = HandlerThread("PelotonSensor-${command.name}-${UUID.randomUUID()}")
+
     private val mutableSensorValue = MutableSharedFlow<Result<T?>>(replay = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val sensorValue = mutableSensorValue
@@ -38,17 +43,14 @@ abstract class Sensor<T>(private val command: Command, private val binder: IBind
                         return
                     }
 
-                    runBlocking {
-                        mutableSensorValue.emit(Result.success(mappedValue))
-                    }
-                } catch (sensorException: SensorException) {
-                    runBlocking {
-                        mutableSensorValue.emit(Result.failure(sensorException))
-                    }
+                    mutableSensorValue.tryEmit(Result.success(mappedValue))
+                } catch (sensorException: RecoverableSensorException) {
+                    mutableSensorValue.tryEmit(Result.failure(sensorException))
                 }
 
                 if (message.what < 0 || isComplete()) {
-                    Timber.w("closing sensor thread after request What:${message.what} IsComplete:${isComplete()}")
+                    Timber.w("closing sensor thread after request " +
+                            "What:${message.what} IsComplete:${isComplete()}")
                     stop()
                 }
             }
@@ -57,7 +59,7 @@ abstract class Sensor<T>(private val command: Command, private val binder: IBind
         Messenger(binder).send(Message().apply {
             what = command.id
             data = bundleOf(
-                SensorBundleKey.RequestId.bundleKey to UUID.randomUUID().toString()
+                RequestIdBundleKey to UUID.randomUUID().toString()
             )
             replyTo = Messenger(handler)
         })

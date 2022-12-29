@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package com.spop.poverlay.util.livechart
 
 import com.yabu.livechart.view.LiveChartStyle
@@ -12,6 +14,8 @@ import com.yabu.livechart.model.Dataset
 
 /**
  * A wrapper to enable patching a bug in LiveChart library
+ *
+ * I wish I had documented what bug that was.
  */
 class LiveChart(context: Context, attrs: AttributeSet? = null) : FrameLayout(context, attrs) {
 

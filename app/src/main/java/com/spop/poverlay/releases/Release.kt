@@ -5,7 +5,9 @@ import com.spop.poverlay.BuildConfig
 import java.util.*
 
 data class Release(
+    // Git Tag
     val tagName: String,
+    // Release title in Github
     val friendlyName: String,
     val createdAt: Date,
     val url: Uri

@@ -60,7 +60,7 @@ class PelotonV1SensorInterface(context: Context) : SensorInterface, CoroutineSco
         filterNotNull()
             .map { value -> value.getOrThrow() }
             .retry {
-                if (it is SensorException) {
+                if (it is RecoverableSensorException) {
                     Timber.e(it, "sensor exception:")
                     return@retry true
                 }
