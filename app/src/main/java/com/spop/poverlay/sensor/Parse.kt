@@ -11,7 +11,7 @@ fun hexResponseToBytes(response: String): ByteArray? {
         return null
     }
     // Response is space delimited, base 16 ASCII values
-    val splitResponse = response.split(" ")
+    val splitResponse = response.trim().split(" ")
     return splitResponse.map { character ->
         character.toIntOrNull(16)?.toByte() ?: return null
     }.toByteArray()
