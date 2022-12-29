@@ -2,21 +2,27 @@ package com.spop.poverlay.util
 
 import android.app.Service
 import android.view.View
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.lifecycle.*
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Allows a service to act as a LifecycleOwner
  * Mainly intended for use with WindowManager
  */
 abstract class LifecycleEnabledService : Service(), LifecycleOwner, ViewModelStoreOwner,
-    SavedStateRegistryOwner {
+    SavedStateRegistryOwner, CoroutineScope {
 
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+
+    override val coroutineContext: CoroutineContext
+        get() = coroutineScope.coroutineContext
     /**
      * Must be called on views before this service will provide lifecycle access
      */
@@ -60,5 +66,6 @@ abstract class LifecycleEnabledService : Service(), LifecycleOwner, ViewModelSto
         super.onDestroy()
         handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
         handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        coroutineScope.cancel()
     }
 }
