@@ -28,6 +28,7 @@ import com.spop.poverlay.MainActivity
 import com.spop.poverlay.R
 import com.spop.poverlay.sensor.DummySensorInterface
 import com.spop.poverlay.sensor.PelotonV1SensorInterface
+import com.spop.poverlay.util.IsRunningOnPeloton
 import com.spop.poverlay.util.LifecycleEnabledService
 import com.spop.poverlay.util.disableAnimations
 import kotlinx.coroutines.flow.combine
@@ -36,7 +37,6 @@ import java.util.*
 import kotlin.math.roundToInt
 
 
-private const val PelotonBrand = "Peloton"
 
 class OverlayService : LifecycleEnabledService() {
     companion object {
@@ -88,7 +88,7 @@ class OverlayService : LifecycleEnabledService() {
         )
 
 
-        val sensorInterface = if (Build.BRAND == PelotonBrand) {
+        val sensorInterface = if (IsRunningOnPeloton) {
             PelotonV1SensorInterface(this).also {
                 lifecycle.addObserver(object : DefaultLifecycleObserver {
                     override fun onDestroy(owner: LifecycleOwner) {

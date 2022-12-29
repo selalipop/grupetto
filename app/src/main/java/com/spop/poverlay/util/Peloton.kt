@@ -1,9 +1,15 @@
 package com.spop.poverlay.util
 
+import android.os.Build
 import kotlin.math.pow
 import kotlin.math.sqrt
 
-fun calculateSpeedFromPower(it: Float) =
+
+private const val PelotonBrand = "Peloton"
+
+val IsRunningOnPeloton = Build.BRAND == PelotonBrand
+
+fun calculateSpeedFromPelotonV1Power(it: Float) =
     if (it < 0.1f) {
         0f
     } else {
