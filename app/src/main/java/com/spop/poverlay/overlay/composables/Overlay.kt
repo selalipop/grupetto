@@ -41,7 +41,8 @@ val BackgroundColorDefault = Color(20, 20, 20)
 
 @Composable
 fun Overlay(
-    viewModel: OverlaySensorViewModel,
+    sensorViewModel: OverlaySensorViewModel,
+    timerViewModel: OverlayTimerViewModel,
     height: Dp,
     locationState: State<OverlayLocation>,
     horizontalDragCallback: (Float) -> Float,
@@ -51,21 +52,21 @@ fun Overlay(
 ) {
     val placeholderText = "-"
 
-    val power by viewModel.powerValue.collectAsStateWithLifecycle(initialValue = placeholderText)
+    val power by sensorViewModel.powerValue.collectAsStateWithLifecycle(initialValue = placeholderText)
 
-    val powerGraph = remember { viewModel.powerGraph }
-    val rpm by viewModel.rpmValue.collectAsStateWithLifecycle(initialValue = placeholderText)
-    val resistance by viewModel.resistanceValue.collectAsStateWithLifecycle(initialValue = placeholderText)
-    val speed by viewModel.speedValue.collectAsStateWithLifecycle(initialValue = placeholderText)
-    val speedLabel by viewModel.speedLabel.collectAsStateWithLifecycle(initialValue = "")
-    val timerLabel by viewModel.timerLabel.collectAsStateWithLifecycle(initialValue = "")
-    val isTimerPaused by viewModel.timerPaused.collectAsStateWithLifecycle(initialValue = false)
-    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle(initialValue = null)
+    val powerGraph = remember { sensorViewModel.powerGraph }
+    val rpm by sensorViewModel.rpmValue.collectAsStateWithLifecycle(initialValue = placeholderText)
+    val resistance by sensorViewModel.resistanceValue.collectAsStateWithLifecycle(initialValue = placeholderText)
+    val speed by sensorViewModel.speedValue.collectAsStateWithLifecycle(initialValue = placeholderText)
+    val speedLabel by sensorViewModel.speedLabel.collectAsStateWithLifecycle(initialValue = "")
+    val timerLabel by timerViewModel.timerLabel.collectAsStateWithLifecycle(initialValue = "")
+    val isTimerPaused by timerViewModel.timerPaused.collectAsStateWithLifecycle(initialValue = false)
+    val errorMessage by sensorViewModel.errorMessage.collectAsStateWithLifecycle(initialValue = null)
 
     var pauseChart by remember { mutableStateOf(true) }
 
     val visibleFlow = remember {
-        viewModel.isVisible.onEach {
+        sensorViewModel.isVisible.onEach {
             // If the visibility change used an animator, pause the graph
             // This improves animation performance drastically
             val isAnimatedVisibilityChange = pauseChart != it
@@ -117,7 +118,7 @@ fun Overlay(
     }
     val timer = @Composable {
         val showTimerWhenMinimizedFlow = remember {
-            viewModel.showTimerWhenMinimized.onEach {
+            timerViewModel.showTimerWhenMinimized.onEach {
                 Timber.i("Show Timer: $it")
             }
         }
@@ -134,8 +135,8 @@ fun Overlay(
             timerLabel = timerLabel,
             cadenceLabel = rpm,
             speedLabel = speed,
-            onTap = { viewModel.onTimerTap() },
-            onLongPress = { viewModel.onTimerLongPress() }
+            onTap = { timerViewModel.onTimerTap() },
+            onLongPress = { timerViewModel.onTimerLongPress() }
         )
     }
     val mainContent = @Composable {
@@ -165,14 +166,14 @@ fun Overlay(
                 })
             }
             .pointerInput(Unit) {
-                detectTapGestures(onTap = { viewModel.onOverlayPressed() },
-                    onLongPress = { viewModel.onOverlayDoubleTap() })
+                detectTapGestures(onTap = { sensorViewModel.onOverlayPressed() },
+                    onLongPress = { sensorViewModel.onOverlayDoubleTap() })
             }) {
 
             errorMessage?.let {
                 Snackbar(
                     action = {
-                        Button(onClick = { viewModel.onDismissErrorPressed() }) {
+                        Button(onClick = { sensorViewModel.onDismissErrorPressed() }) {
                             Text("Dismiss")
                         }
                     },
@@ -203,8 +204,8 @@ fun Overlay(
                 resistance = resistance,
                 speed = speed,
                 speedLabel = speedLabel,
-                onSpeedClicked = { viewModel.onClickedSpeed() },
-                onChartClicked = { viewModel.onOverlayPressed() })
+                onSpeedClicked = { sensorViewModel.onClickedSpeed() },
+                onChartClicked = { sensorViewModel.onOverlayPressed() })
         }
     }
     Column(

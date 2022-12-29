@@ -99,12 +99,17 @@ class OverlayService : LifecycleEnabledService() {
         } else {
             EmulatorSensorInterface
         }
+
         val sensorViewModel = OverlaySensorViewModel(
             application,
             sensorInterface,
-            ConfigurationRepository(applicationContext, this)
+            DeadSensorDetector(sensorInterface, this.coroutineContext)
         )
 
+        val timerViewModel = OverlayTimerViewModel(
+            application,
+            ConfigurationRepository(applicationContext, this)
+        )
         val dialogViewModel = OverlayDialogViewModel(screenSize)
 
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -151,6 +156,7 @@ class OverlayService : LifecycleEnabledService() {
             setContent {
                 Overlay(
                     sensorViewModel,
+                    timerViewModel,
                     OverlayHeightDp,
                     dialogViewModel.dialogLocation.collectAsState(),
                     dialogViewModel::processHorizontalDrag,
