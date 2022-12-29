@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.sp
 import com.spop.poverlay.R
 import com.spop.poverlay.overlay.BackgroundColorDefault
 import com.spop.poverlay.overlay.OverlayLocation
-import com.spop.poverlay.ui.theme.LatoFontFamily
 
 
 @Composable
@@ -147,7 +146,6 @@ private fun OverlayTimerField(
         Text(
             timerLabel,
             color = Color.White,
-            fontFamily = LatoFontFamily,
             fontSize = 19.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier

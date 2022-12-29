@@ -3,10 +3,7 @@ package com.spop.poverlay
 import android.text.format.DateUtils
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -14,7 +11,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -67,36 +63,32 @@ private fun StartServicePage(
 ) {
     Text(
         text = "Grupetto: An overlay for your Peloton bike",
-        fontFamily = LatoFontFamily,
         fontSize = 50.sp,
         fontWeight = FontWeight.Bold
     )
     Text(
         text = "Note: Not endorsed with, associated with, or supported by Peloton",
-        fontFamily = LatoFontFamily,
         fontSize = 25.sp,
         fontStyle = FontStyle.Italic,
         fontWeight = FontWeight.Bold
     )
-    Spacer(modifier = Modifier.height(100.dp))
+    Spacer(modifier = Modifier.height(180.dp))
     Button(
-        onClick = onClickedStartOverlay
+        onClick = onClickedStartOverlay,
     ) {
         Text(
             text = "Click here to start the overlay",
+            fontSize = 30.sp,
             fontFamily = LatoFontFamily,
-            fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             fontStyle = FontStyle.Italic,
         )
     }
-    Spacer(modifier = Modifier.height(40.dp))
+    Spacer(modifier = Modifier.height(100.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = "Show Elapsed Time When Minimized?",
-            fontFamily = LatoFontFamily,
-            fontSize = 20.sp,
-            fontStyle = FontStyle.Italic,
+            text = "Show timer when the overlay minimized?",
+            fontSize = 20.sp
         )
         Checkbox(
             checked = timerShownWhenMinimized,
@@ -104,11 +96,10 @@ private fun StartServicePage(
         )
     }
 
-
-    Spacer(modifier = Modifier.height(100.dp))
+    Spacer(modifier = Modifier.height(40.dp))
 
     if (latestRelease == null) {
-        Text(text = "Couldn't load releases")
+        Text(text = "Couldn't check for updates")
     } else {
         val formattedDate = DateUtils.getRelativeTimeSpanString(latestRelease.createdAt.time)
         val releaseName =
@@ -116,17 +107,14 @@ private fun StartServicePage(
         val text = if (latestRelease.isCurrentlyInstalled) {
             "Grupetto is up to date: $releaseName"
         } else {
-            "New release found, click here to open: $releaseName"
+            "\uD83D\uDFE1 New release found, click here to open: $releaseName"
         }
-        val textColor = if (latestRelease.isCurrentlyInstalled) {
-            Color(0.09f, 0.133f, 0.388f, 1.0f)
-        } else {
-            Color(0.902f, 0.467f, 0.0f, 1.0f)
-        }
-
         ClickableText(
             text = AnnotatedString(text),
-            style = TextStyle.Default.copy(color = textColor, fontSize = 20.sp)
+            style = LocalTextStyle.current.copy(
+                fontSize = 20.sp,
+                color = LocalContentColor.current,
+            )
         ) {
             onClickedRelease(latestRelease)
         }
@@ -139,9 +127,9 @@ private fun StartServicePage(
     ) {
         Text(
             text = "Restart Grupetto",
-            fontFamily = LatoFontFamily,
             fontSize = 20.sp,
             fontStyle = FontStyle.Italic,
+            color = Color.White
         )
     }
 }
@@ -150,14 +138,13 @@ private fun StartServicePage(
 private fun PermissionPage(onClickedGrantPermission: () -> Unit) {
     Text(
         text = "Grupetto Needs Permission To Draw Over Other Apps",
-        fontFamily = LatoFontFamily,
+
         fontSize = 40.sp,
         fontStyle = FontStyle.Italic,
         fontWeight = FontWeight.Bold
     )
     Text(
         text = "It uses this permission to draw an overlay with your bike's sensor data",
-        fontFamily = LatoFontFamily,
         fontSize = 20.sp,
         fontWeight = FontWeight.Normal
     )

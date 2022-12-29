@@ -8,7 +8,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.spop.poverlay.ui.theme.LatoFontFamily
 
 
 @Composable
@@ -21,22 +20,19 @@ fun StatCard(name: String, value: String, unit: String, modifier: Modifier) {
             text = name,
             color = Color.White,
             fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            fontFamily = LatoFontFamily
+            fontWeight = FontWeight.Normal
         )
         Text(
             text = value,
             color = Color.White,
             fontSize = 48.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = LatoFontFamily,
+            fontWeight = FontWeight.Bold
         )
         Text(
             text = unit,
             fontSize = 14.sp,
             color = Color.White,
-            fontWeight = FontWeight.Light,
-            fontFamily = LatoFontFamily
+            fontWeight = FontWeight.Light
         )
     }
 }
