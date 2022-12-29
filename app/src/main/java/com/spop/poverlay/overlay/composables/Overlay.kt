@@ -66,7 +66,7 @@ fun Overlay(
     var pauseChart by remember { mutableStateOf(true) }
 
     val visibleFlow = remember {
-        sensorViewModel.isVisible.onEach {
+        sensorViewModel.isMinimized.onEach {
             // If the visibility change used an animator, pause the graph
             // This improves animation performance drastically
             val isAnimatedVisibilityChange = pauseChart != it
@@ -74,7 +74,7 @@ fun Overlay(
         }
     }
 
-    val visible by visibleFlow.collectAsStateWithLifecycle(initialValue = true)
+    val minimized by visibleFlow.collectAsStateWithLifecycle(initialValue = false)
     val location by remember { locationState }
     val size = remember { mutableStateOf(IntSize.Zero) }
 
@@ -84,18 +84,18 @@ fun Overlay(
     }
 
     val timerAlpha by animateFloatAsState(
-        if (visible) 1f else .5f,
+        if (minimized) .5f else 1f,
         animationSpec = TweenSpec(VisibilityChangeDuration, 0, LinearEasing)
     )
 
     val visibilityOffset by animateIntOffsetAsState(
-        if (visible) {
-            IntOffset.Zero
-        } else {
+        if (minimized) {
             when (location) {
                 OverlayLocation.Top -> IntOffset(0, -maxOffset)
                 OverlayLocation.Bottom -> IntOffset(0, maxOffset)
             }
+        } else {
+            IntOffset.Zero
         },
         animationSpec = TweenSpec(VisibilityChangeDuration, 0, LinearEasing),
         finishedListener = {
@@ -126,7 +126,7 @@ fun Overlay(
             .collectAsStateWithLifecycle(initialValue = true)
 
         OverlayMinimizedContent(
-            isMinimized = !visible,
+            isMinimized = minimized,
             timerPaused = isTimerPaused,
             showTimerWhenMinimized = showTimerWhenMinimized,
             location = location,
@@ -170,21 +170,6 @@ fun Overlay(
                     onLongPress = { sensorViewModel.onOverlayDoubleTap() })
             }) {
 
-            errorMessage?.let {
-                Snackbar(
-                    action = {
-                        Button(onClick = { sensorViewModel.onDismissErrorPressed() }) {
-                            Text("Dismiss")
-                        }
-                    },
-                    containerColor = Color.White,
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .zIndex(1f)
-                ) {
-                    Text(it, color = Color.Black)
-                }
-            }
 
 
             val rowAlignment = when (location) {
@@ -214,6 +199,22 @@ fun Overlay(
             .offset { visibilityOffset },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        errorMessage?.let {
+            Snackbar(
+                action = {
+                    Button(onClick = { sensorViewModel.onDismissErrorPressed() }) {
+                        Text("Dismiss")
+                    }
+                },
+                containerColor = Color.White,
+                modifier = Modifier
+                    .padding(8.dp)
+                    .zIndex(1f)
+            ) {
+                Text(it, color = Color.Black)
+            }
+            return@Column
+        }
 
         when (location) {
             OverlayLocation.Top -> {

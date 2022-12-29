@@ -26,7 +26,7 @@ import androidx.lifecycle.lifecycleScope
 import com.spop.poverlay.ConfigurationRepository
 import com.spop.poverlay.MainActivity
 import com.spop.poverlay.R
-import com.spop.poverlay.sensor.DummySensorInterface
+import com.spop.poverlay.sensor.DeadSensorInterface
 import com.spop.poverlay.sensor.PelotonV1SensorInterface
 import com.spop.poverlay.util.IsRunningOnPeloton
 import com.spop.poverlay.util.LifecycleEnabledService
@@ -46,7 +46,7 @@ class OverlayService : LifecycleEnabledService() {
 
         private const val OverlayServiceId = 2032
 
-        val OverlayHeightDp = 100.dp
+        val OverlayHeightDp = 110.dp
 
         //Increases the size of the touch target during the hidden state
         const val HiddenTouchTargetMarginPx = 40
@@ -56,7 +56,7 @@ class OverlayService : LifecycleEnabledService() {
         const val VerticalMoveDragThreshold = .5f
 
         // Replace with DeadSensorInterface to simulate a dead sensor
-        val EmulatorSensorInterface = DummySensorInterface()
+        val EmulatorSensorInterface = DeadSensorInterface()
     }
 
 

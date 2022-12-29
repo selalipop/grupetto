@@ -103,12 +103,10 @@ private fun StartServicePage(
         Text(text = "Couldn't check for updates")
     } else {
         val formattedDate = DateUtils.getRelativeTimeSpanString(latestRelease.createdAt.time)
-        val releaseName =
-            "${latestRelease.tagName} — $formattedDate — ${latestRelease.friendlyName}"
         val text = if (latestRelease.isCurrentlyInstalled) {
-            "Grupetto is up to date: $releaseName"
+            "Grupetto is up to date: ${latestRelease.tagName} • $formattedDate • ${latestRelease.friendlyName}"
         } else {
-            "\uD83D\uDFE1 New release found, click here to open: $releaseName"
+            "⭐ Click to view update released $formattedDate: ${latestRelease.friendlyName}. \n"
         }
         ClickableText(
             text = AnnotatedString(text),

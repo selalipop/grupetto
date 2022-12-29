@@ -36,28 +36,21 @@ class OverlaySensorViewModel(
 
     }
 
-    init {
-        setupPowerGraphData()
-        viewModelScope.launch(Dispatchers.IO) {
-            deadSensorDetector.deadSensorDetected.collect {
-                onDeadSensor()
-            }
-        }
-    }
 
-
-    private val mutableIsVisible = MutableStateFlow(true)
-    val isVisible = mutableIsVisible.asStateFlow()
+    private val mutableIsMinimized = MutableStateFlow(false)
+    val isMinimized = mutableIsMinimized.asStateFlow()
 
     private val mutableErrorMessage = MutableStateFlow<String?>(null)
     val errorMessage = mutableErrorMessage.asStateFlow()
+
+
 
     fun onDismissErrorPressed() {
         mutableErrorMessage.tryEmit(null)
     }
 
     fun onOverlayPressed() {
-        mutableIsVisible.apply { value = !value }
+        mutableIsMinimized.apply { value = !value }
     }
 
     fun onOverlayDoubleTap() {
@@ -71,7 +64,7 @@ class OverlaySensorViewModel(
         mutableErrorMessage
             .tryEmit(
                 "The sensors seem to have stopped responding," +
-                        " you may need to restart the bike by removing the " +
+                        " you may need to restart your Peloton by removing the" +
                         " power adapter momentarily"
             )
     }
@@ -129,6 +122,23 @@ class OverlaySensorViewModel(
             }
         }
     }
+    // Happens last to ensure initialization order is correct
+    init {
+        setupPowerGraphData()
+        viewModelScope.launch(Dispatchers.IO) {
+            deadSensorDetector.deadSensorDetected.collect {
+                onDeadSensor()
+            }
+        }
 
+        viewModelScope.launch(Dispatchers.IO) {
+            errorMessage.collect {
+                // Leave minimized state if we're showing an error message
+                if (it != null && mutableIsMinimized.value) {
+                    mutableIsMinimized.value = false
+                }
+            }
+        }
+    }
 }
 
