@@ -135,6 +135,7 @@ fun Overlay(
             timerLabel = timerLabel,
             cadenceLabel = rpm,
             speedLabel = speed,
+            resistanceLabel = resistance,
             onTap = { timerViewModel.onTimerTap() },
             onLongPress = { timerViewModel.onTimerLongPress() }
         )
@@ -171,16 +172,16 @@ fun Overlay(
             }) {
 
 
-
             val rowAlignment = when (location) {
                 OverlayLocation.Top -> Alignment.Top
                 OverlayLocation.Bottom -> Alignment.Bottom
             }
 
-            OverlayMainContent(modifier = Modifier
-                .wrapContentWidth(unbounded = true)
-                .padding(horizontal = 9.dp)
-                .padding(bottom = 5.dp),
+            OverlayMainContent(
+                modifier = Modifier
+                    .wrapContentWidth(unbounded = true)
+                    .padding(horizontal = 9.dp)
+                    .padding(bottom = 5.dp),
                 rowAlignment = rowAlignment,
                 power = power,
                 rpm = rpm,
@@ -190,7 +191,8 @@ fun Overlay(
                 speed = speed,
                 speedLabel = speedLabel,
                 onSpeedClicked = { sensorViewModel.onClickedSpeed() },
-                onChartClicked = { sensorViewModel.onOverlayPressed() })
+                onChartClicked = { sensorViewModel.onOverlayPressed() }
+            )
         }
     }
     Column(

@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
@@ -32,6 +31,7 @@ fun OverlayMinimizedContent(
     powerLabel: String,
     cadenceLabel: String,
     speedLabel: String,
+    resistanceLabel: String,
     contentAlpha: Float,
     timerLabel: String,
     timerPaused: Boolean,
@@ -97,7 +97,7 @@ fun OverlayMinimizedContent(
                     .width(80.dp)
                     .alpha(timerAlpha),
                 timerLabel = timerLabel,
-                icon = painterResource(id = R.drawable.ic_timer)
+                iconDrawable = R.drawable.ic_timer
             )
         }
 
@@ -106,19 +106,25 @@ fun OverlayMinimizedContent(
             OverlayTimerField(
                 modifier = Modifier.width(56.dp),
                 timerLabel = powerLabel,
-                icon = painterResource(id = R.drawable.ic_power)
+                iconDrawable = R.drawable.ic_power
             )
             Spacer(modifier = Modifier.width(4.dp))
             OverlayTimerField(
                 modifier = Modifier.width(56.dp),
                 timerLabel = cadenceLabel,
-                icon = painterResource(id = R.drawable.ic_cadence)
+                iconDrawable = R.drawable.ic_cadence
             )
             Spacer(modifier = Modifier.width(4.dp))
             OverlayTimerField(
                 modifier = Modifier.width(58.dp),
                 timerLabel = speedLabel,
-                icon = painterResource(id = R.drawable.ic_speed)
+                iconDrawable = R.drawable.ic_speed
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            OverlayTimerField(
+                modifier = Modifier.width(58.dp),
+                timerLabel = resistanceLabel,
+                iconDrawable = R.drawable.ic_resistance
             )
         }
     }
@@ -128,7 +134,7 @@ fun OverlayMinimizedContent(
 private fun OverlayTimerField(
     modifier: Modifier,
     timerLabel: String,
-    icon: Painter,
+    iconDrawable: Int,
 ) {
     Row(
         modifier = modifier
@@ -139,8 +145,9 @@ private fun OverlayTimerField(
             modifier = Modifier
                 .requiredHeight(20.dp)
                 .requiredWidth(16.dp)
+                .align(Alignment.CenterVertically)
                 .padding(vertical = 4.dp),
-            painter = icon,
+            painter = painterResource(id = iconDrawable),
             contentDescription = null,
         )
         Text(
