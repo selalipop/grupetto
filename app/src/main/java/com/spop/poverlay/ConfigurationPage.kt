@@ -11,9 +11,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -103,16 +106,23 @@ private fun StartServicePage(
         Text(text = "Couldn't check for updates")
     } else {
         val formattedDate = DateUtils.getRelativeTimeSpanString(latestRelease.createdAt.time)
-        val text = if (latestRelease.isCurrentlyInstalled) {
-            "Grupetto is up to date: ${latestRelease.tagName} • $formattedDate • ${latestRelease.friendlyName}"
+        val releaseText = if (latestRelease.isCurrentlyInstalled) {
+            buildAnnotatedString {
+                "Grupetto is up to date: ${latestRelease.tagName} • $formattedDate • ${latestRelease.friendlyName}"
+            }
         } else {
-            "⭐ Click to view update released $formattedDate: ${latestRelease.friendlyName}. \n"
+            buildAnnotatedString {
+                append("⭐ ")
+                withStyle(style = SpanStyle(textDecoration = TextDecoration.Underline)) {
+                    append("New version released $formattedDate: ${latestRelease.friendlyName}.")
+                }
+            }
         }
         ClickableText(
-            text = AnnotatedString(text),
+            text = releaseText,
             style = LocalTextStyle.current.copy(
                 fontSize = 20.sp,
-                color = LocalContentColor.current,
+                color = LocalContentColor.current
             )
         ) {
             onClickedRelease(latestRelease)
