@@ -5,12 +5,17 @@ import android.view.WindowManager.LayoutParams
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.IntSize
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.abs
 import kotlin.math.ceil
 
 @Suppress("LiftReturnOrAssignment")
-class OverlayDialogViewModel(private val screenSize: Size) {
+class OverlayDialogViewModel(
+    private val screenSize: Size,
+    private val isMinimized : StateFlow<Boolean>
+    ) {
     companion object {
         // If the overlay is dragged within this range of pixels from the center of the screen
         // snap to the center of the screen instead
@@ -18,7 +23,9 @@ class OverlayDialogViewModel(private val screenSize: Size) {
     }
 
     val dialogOrigin = MutableStateFlow(Offset.Zero)
+    // Defined as width to height
     val dialogSizeParams = MutableStateFlow(LayoutParams.WRAP_CONTENT to LayoutParams.WRAP_CONTENT)
+    val minimizedDialogSizeParams = MutableStateFlow(LayoutParams.WRAP_CONTENT to LayoutParams.WRAP_CONTENT)
     val partialOverlayFlags = MutableStateFlow(0)
     val touchTargetVisiblity = MutableStateFlow(View.GONE)
     val dialogLocation = MutableStateFlow(OverlayLocation.Bottom)
@@ -26,7 +33,6 @@ class OverlayDialogViewModel(private val screenSize: Size) {
 
 
     val touchTargetHeight = MutableStateFlow(0f)
-
     // When overlay is hidden, an invisible touch target appears to accept touches:
     // - Touch target visibility is the opposite of the main view
     // - Overlay has FLAG_NOT_TOUCHABLE if it has started hiding
@@ -34,9 +40,9 @@ class OverlayDialogViewModel(private val screenSize: Size) {
     fun processHideProgress(hiddenHeight: Float, totalHeight: Float) {
 
         val remainingHeight = abs(totalHeight - (abs(hiddenHeight)))
-        val isHidden = abs(hiddenHeight) > 0f
+        val isMinimizeDone = abs(hiddenHeight) > 0f
 
-        if (isHidden) {
+        if (isMinimizeDone) {
             touchTargetVisiblity.value = View.VISIBLE
             touchTargetHeight.value = remainingHeight + OverlayService.HiddenTouchTargetMarginPx
         } else {
@@ -45,7 +51,7 @@ class OverlayDialogViewModel(private val screenSize: Size) {
         }
 
 
-        partialOverlayFlags.value = if (isHidden) {
+        partialOverlayFlags.value = if (isMinimizeDone) {
             LayoutParams.FLAG_NOT_TOUCHABLE
         } else {
             0
@@ -80,6 +86,12 @@ class OverlayDialogViewModel(private val screenSize: Size) {
         horizontalDragScreenRange = calculateHorizontalDragScreenRange(size.width)
         val (_, currentHeight) = dialogSizeParams.value
         dialogSizeParams.value = size.width to currentHeight
+    }
+
+    fun onTimerOverlayLayout(size : IntSize){
+        horizontalDragScreenRange = calculateHorizontalDragScreenRange(size.width)
+        val (_, currentHeight) = dialogSizeParams.value
+        minimizedDialogSizeParams.value = size.width to currentHeight
     }
     private var horizontalDragScreenRange = calculateHorizontalDragScreenRange(0)
 

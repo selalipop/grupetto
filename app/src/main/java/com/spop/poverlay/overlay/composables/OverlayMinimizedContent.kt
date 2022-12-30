@@ -9,13 +9,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.spop.poverlay.R
@@ -36,7 +40,8 @@ fun OverlayMinimizedContent(
     timerLabel: String,
     timerPaused: Boolean,
     onTap: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    onLayout: (IntSize) -> Unit
 ) {
     val backgroundShape = if (isMinimized) {
         RoundedCornerShape(8.dp)
@@ -51,10 +56,17 @@ fun OverlayMinimizedContent(
     } else {
         0.dp
     }
+    val size = remember { mutableStateOf(IntSize.Zero) }
+
     Row(
         modifier = Modifier
             .alpha(contentAlpha)
-            .wrapContentSize()
+            .wrapContentSize().onSizeChanged {
+                if (it.width != size.value.width || it.height != size.value.height) {
+                    size.value = it
+                    onLayout(size.value)
+                }
+            }
             .padding(vertical = expandedVerticalPadding)
             .background(
                 color = BackgroundColorDefault,

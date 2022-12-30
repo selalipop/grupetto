@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.spop.poverlay.MainActivity
+import com.spop.poverlay.sensor.DeadSensorDetector
 import com.spop.poverlay.sensor.interfaces.SensorInterface
 import com.spop.poverlay.util.smoothSensorValue
 import com.spop.poverlay.util.tickerFlow
@@ -38,6 +39,7 @@ class OverlaySensorViewModel(
     }
 
 
+    //TODO: Move this logic to dialog view model
     private val mutableIsMinimized = MutableStateFlow(false)
     val isMinimized = mutableIsMinimized.asStateFlow()
 

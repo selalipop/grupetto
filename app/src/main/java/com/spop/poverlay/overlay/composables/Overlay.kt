@@ -40,6 +40,7 @@ val BackgroundColorDefault = Color(20, 20, 20)
 
 // Shown when a sensor hasn't reported a value yet
 const val SensorValuePlaceholderText = "-"
+
 @Composable
 fun Overlay(
     sensorViewModel: OverlaySensorViewModel,
@@ -49,7 +50,8 @@ fun Overlay(
     horizontalDragCallback: (Float) -> Float,
     verticalDragCallback: (Float) -> Float,
     offsetCallback: (Float, Float) -> Unit,
-    onLayout: (IntSize) -> Unit
+    onLayout: (IntSize) -> Unit,
+    onTimerLayout: (IntSize) -> Unit
 ) {
     val power by sensorViewModel.powerValue.collectAsStateWithLifecycle(initialValue = SensorValuePlaceholderText)
 
@@ -136,7 +138,8 @@ fun Overlay(
             speedLabel = speed,
             resistanceLabel = resistance,
             onTap = { timerViewModel.onTimerTap() },
-            onLongPress = { timerViewModel.onTimerLongPress() }
+            onLongPress = { timerViewModel.onTimerLongPress() },
+            onLayout = onTimerLayout
         )
     }
     val mainContent = @Composable {
@@ -194,11 +197,11 @@ fun Overlay(
             )
         }
     }
-    Column(
+
+
+    Box(
         modifier = Modifier
-            .wrapContentSize()
-            .offset { visibilityOffset },
-        horizontalAlignment = Alignment.CenterHorizontally
+            .wrapContentSize(unbounded = true)
     ) {
         errorMessage?.let {
             Snackbar(
@@ -214,20 +217,28 @@ fun Overlay(
             ) {
                 Text(it, color = Color.Black)
             }
-            return@Column
+            return@Box
         }
+        Column(
+            modifier = Modifier
+                .wrapContentSize()
+                .offset { visibilityOffset },
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
 
-        when (location) {
-            OverlayLocation.Top -> {
-                mainContent()
-                timer()
-            }
-            OverlayLocation.Bottom -> {
-                timer()
-                mainContent()
+            when (location) {
+                OverlayLocation.Top -> {
+                    mainContent()
+
+                    timer()
+                }
+                OverlayLocation.Bottom -> {
+                    timer()
+                    mainContent()
+
+                }
             }
         }
-
     }
 
 }

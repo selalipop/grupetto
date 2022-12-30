@@ -1,4 +1,4 @@
-package com.spop.poverlay.overlay
+package com.spop.poverlay.sensor
 
 import com.spop.poverlay.sensor.interfaces.SensorInterface
 import com.spop.poverlay.util.selectForever

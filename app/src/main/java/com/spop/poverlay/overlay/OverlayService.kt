@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
@@ -14,6 +15,7 @@ import android.view.WindowManager
 import android.view.WindowManager.LayoutParams
 import android.widget.FrameLayout
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -26,11 +28,13 @@ import androidx.lifecycle.lifecycleScope
 import com.spop.poverlay.ConfigurationRepository
 import com.spop.poverlay.MainActivity
 import com.spop.poverlay.R
+import com.spop.poverlay.sensor.DeadSensorDetector
 import com.spop.poverlay.sensor.interfaces.DummySensorInterface
 import com.spop.poverlay.sensor.interfaces.PelotonV1SensorInterface
 import com.spop.poverlay.util.IsRunningOnPeloton
 import com.spop.poverlay.util.LifecycleEnabledService
 import com.spop.poverlay.util.disableAnimations
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import timber.log.Timber
 import java.util.*
@@ -109,7 +113,7 @@ class OverlayService : LifecycleEnabledService() {
             application,
             ConfigurationRepository(applicationContext, this)
         )
-        val dialogViewModel = OverlayDialogViewModel(screenSize)
+        val dialogViewModel = OverlayDialogViewModel(screenSize, sensorViewModel.isMinimized)
 
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -123,8 +127,8 @@ class OverlayService : LifecycleEnabledService() {
                 or LayoutParams.FLAG_NOT_FOCUSABLE
                 or LayoutParams.FLAG_LAYOUT_NO_LIMITS)
 
-        val composeParams = LayoutParams(
-            screenSize.width.roundToInt(),
+        val overlayParams = LayoutParams(
+            200,
             LayoutParams.WRAP_CONTENT,
             layoutFlag,
             defaultFlags,
@@ -134,7 +138,7 @@ class OverlayService : LifecycleEnabledService() {
         }
 
         val touchTargetParams = LayoutParams().apply {
-            copyFrom(composeParams)
+            copyFrom(overlayParams)
             disableAnimations()
         }
 
@@ -161,7 +165,8 @@ class OverlayService : LifecycleEnabledService() {
                     dialogViewModel::processHorizontalDrag,
                     dialogViewModel::processVerticalDrag,
                     dialogViewModel::processHideProgress,
-                    dialogViewModel::onOverlayLayout
+                    dialogViewModel::onOverlayLayout,
+                    dialogViewModel::onTimerOverlayLayout
                 )
             }
             alpha = 0.9f
@@ -170,7 +175,7 @@ class OverlayService : LifecycleEnabledService() {
             clipChildren = false
             clipToOutline = false
         }
-        wm.addView(overlayView, composeParams)
+        wm.addView(overlayView, overlayParams)
 
         wm.addView(touchTargetView, touchTargetParams)
         touchTargetView.clipChildren = false
@@ -182,21 +187,37 @@ class OverlayService : LifecycleEnabledService() {
                 dialogViewModel.dialogGravity,
                 dialogViewModel.partialOverlayFlags,
                 dialogViewModel.touchTargetHeight,
-                dialogViewModel.touchTargetVisiblity
-            ) { origin, gravity, overlayFlags, touchTargetHeight, touchTargetVisibility ->
-                composeParams.x = origin.x.roundToInt()
-                composeParams.y = origin.y.roundToInt()
-                composeParams.flags = DefaultOverlayFlags or overlayFlags
-                composeParams.gravity = gravity
-
+                dialogViewModel.dialogSizeParams,
+                dialogViewModel.minimizedDialogSizeParams
+            ) { values ->
+                val origin = values[0] as Offset
+                val gravity = values[1] as Int
+                val overlayFlags = values[2] as Int
+                val touchTargetHeight = values[3] as Float
+                val (width, height)  = values[4] as Pair<Int,Int>
+                val (mWidth, mHeight)  = values[5] as Pair<Int,Int>
+                overlayParams.x = origin.x.roundToInt()
+                overlayParams.y = origin.y.roundToInt()
+                overlayParams.flags = DefaultOverlayFlags or overlayFlags
+                overlayParams.gravity = gravity
+                overlayParams.width = width
+                overlayParams.height = if(sensorViewModel.isMinimized.value){
+                    mHeight
+                }else{
+                    height
+                }
                 touchTargetParams.x = origin.x.roundToInt()
                 touchTargetParams.y = origin.y.roundToInt()
                 touchTargetParams.gravity = gravity
+                touchTargetParams.width = mWidth
                 touchTargetParams.height = touchTargetHeight.roundToInt()
-
-                touchTargetView.visibility = View.VISIBLE
+                touchTargetView.visibility = if(touchTargetHeight > 0f){
+                    View.VISIBLE
+                }else{
+                    View.GONE
+                }
                 disableClipOnParents(overlayView)
-                wm.updateViewLayout(overlayView, composeParams)
+                wm.updateViewLayout(overlayView, overlayParams)
                 wm.updateViewLayout(touchTargetView, touchTargetParams)
             }.collect {}
         }
