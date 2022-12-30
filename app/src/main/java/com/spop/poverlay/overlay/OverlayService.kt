@@ -56,7 +56,7 @@ class OverlayService : LifecycleEnabledService() {
         const val VerticalMoveDragThreshold = .5f
 
         // Replace with DeadSensorInterface to simulate a dead sensor
-        val EmulatorSensorInterface = DeadSensorInterface()
+        val EmulatorSensorInterface by lazy { DummySensorInterface() }
     }
 
 
