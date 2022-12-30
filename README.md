@@ -19,7 +19,7 @@ For developers: When forking this project, be sure to update
 the [ReleaseChecker](app/src/main/java/com/spop/poverlay/releases/ReleaseChecker.kt) to point to
 your repository
 
-# TOC
+---
 
 - [Installation](#installation)
 - [Usage](#usage)
