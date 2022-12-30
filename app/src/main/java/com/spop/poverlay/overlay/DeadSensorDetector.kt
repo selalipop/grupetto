@@ -36,7 +36,7 @@ class DeadSensorDetector(
 
     companion object {
         // Max time between sensor updates before the user is shown the dead sensor message
-        val DeadSensorTimeout = 5.seconds
+        val DeadSensorTimeout = 10.seconds
 
         // Once the dead sensor warning has been shown,
         // wait at least this long before showing it again
