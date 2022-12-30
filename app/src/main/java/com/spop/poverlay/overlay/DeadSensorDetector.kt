@@ -1,6 +1,6 @@
 package com.spop.poverlay.overlay
 
-import com.spop.poverlay.sensor.SensorInterface
+import com.spop.poverlay.sensor.interfaces.SensorInterface
 import com.spop.poverlay.util.selectForever
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

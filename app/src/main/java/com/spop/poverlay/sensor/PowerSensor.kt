@@ -8,7 +8,7 @@ import timber.log.Timber
  *
  * These spikes are referred to as "Spurious Readings" in this implementation, and rejected
  */
-class PowerSensor(binder: IBinder) : RepeatingFloatV1Sensor(Command.GetPowerRepeating, binder) {
+class PowerSensor(binder: IBinder) : Sensor(Command.GetPowerRepeating, binder) {
     companion object {
         // Spurious readings tend to happen at low power values,
         // so only we only reject values when power is below
@@ -26,11 +26,12 @@ class PowerSensor(binder: IBinder) : RepeatingFloatV1Sensor(Command.GetPowerRepe
     var lastReading = 0f
     var consecutiveRejections = 0
 
-    override fun mapFloat(value: Float): Float {
+    override fun mapValue(value: Float): Float {
         val currentReading = value / 10f
         val isRejected =
             if (lastReading > SpuriousReadingThreshold ||
-                consecutiveRejections > SpuriousReadingMaxRejections) {
+                consecutiveRejections > SpuriousReadingMaxRejections
+            ) {
                 false
             } else {
                 currentReading - lastReading > SpuriousReadingDelta

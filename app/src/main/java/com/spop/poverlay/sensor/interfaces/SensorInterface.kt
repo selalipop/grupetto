@@ -1,4 +1,4 @@
-package com.spop.poverlay.sensor
+package com.spop.poverlay.sensor.interfaces
 
 import com.spop.poverlay.util.calculateSpeedFromPelotonV1Power
 import kotlinx.coroutines.flow.Flow

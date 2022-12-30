@@ -26,8 +26,8 @@ import androidx.lifecycle.lifecycleScope
 import com.spop.poverlay.ConfigurationRepository
 import com.spop.poverlay.MainActivity
 import com.spop.poverlay.R
-import com.spop.poverlay.sensor.DeadSensorInterface
-import com.spop.poverlay.sensor.PelotonV1SensorInterface
+import com.spop.poverlay.sensor.interfaces.DummySensorInterface
+import com.spop.poverlay.sensor.interfaces.PelotonV1SensorInterface
 import com.spop.poverlay.util.IsRunningOnPeloton
 import com.spop.poverlay.util.LifecycleEnabledService
 import com.spop.poverlay.util.disableAnimations

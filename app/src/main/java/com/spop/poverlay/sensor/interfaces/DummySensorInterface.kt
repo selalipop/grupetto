@@ -1,4 +1,4 @@
-package com.spop.poverlay.sensor
+package com.spop.poverlay.sensor.interfaces
 
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow

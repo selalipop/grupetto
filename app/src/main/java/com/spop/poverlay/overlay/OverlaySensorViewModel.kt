@@ -6,7 +6,8 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.spop.poverlay.MainActivity
-import com.spop.poverlay.sensor.SensorInterface
+import com.spop.poverlay.sensor.interfaces.SensorInterface
+import com.spop.poverlay.util.smoothSensorValue
 import com.spop.poverlay.util.tickerFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

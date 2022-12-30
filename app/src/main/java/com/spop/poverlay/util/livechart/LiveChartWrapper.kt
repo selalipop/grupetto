@@ -2,15 +2,14 @@
 
 package com.spop.poverlay.util.livechart
 
-import com.yabu.livechart.view.LiveChartStyle
-import com.yabu.livechart.view.LiveChartTouchOverlay
-
 
 import android.content.Context
 import android.util.AttributeSet
 import android.view.View
 import android.widget.FrameLayout
 import com.yabu.livechart.model.Dataset
+import com.yabu.livechart.view.LiveChartStyle
+import com.yabu.livechart.view.LiveChartTouchOverlay
 
 /**
  * A wrapper to enable patching a bug in LiveChart library
