@@ -45,7 +45,6 @@ class OverlaySensorViewModel(
     val errorMessage = mutableErrorMessage.asStateFlow()
 
 
-
     fun onDismissErrorPressed() {
         mutableErrorMessage.tryEmit(null)
     }
@@ -64,9 +63,9 @@ class OverlaySensorViewModel(
     private fun onDeadSensor() {
         mutableErrorMessage
             .tryEmit(
-                "The sensors seem to have stopped responding," +
-                        " you may need to restart your Peloton by removing the" +
-                        " power adapter momentarily"
+                "The sensors seem to have fallen asleep." +
+                        " You may need to restart your Peloton by removing the" +
+                        " power adapter momentarily to restore them."
             )
     }
 
@@ -111,7 +110,7 @@ class OverlaySensorViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             //Sensor value is read every tick and added to graph
             combine(
-                sensorInterface.power,
+                sensorInterface.power.smoothSensorValue(),
                 tickerFlow(GraphUpdatePeriod)
             ) { sensorValue, _ -> sensorValue }.collect { value ->
                 withContext(Dispatchers.Main) {
@@ -123,6 +122,7 @@ class OverlaySensorViewModel(
             }
         }
     }
+
     // Happens last to ensure initialization order is correct
     init {
         setupPowerGraphData()
