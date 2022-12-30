@@ -27,18 +27,19 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.spop.poverlay.overlay.composables.OverlayMainContent
 import com.spop.poverlay.overlay.composables.OverlayMinimizedContent
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.onEach
 import timber.log.Timber
 
-//This is the percentage of the overlay that is offscreen when hidden
-const val PercentVisibleWhenHidden = .00f
-const val VisibilityChangeDuration = 150
+const val VisibilityChangeDurationMs = 150
 val OverlayCornerRadius = 25.dp
 val StatCardWidth = 105.dp
 val PowerChartFullWidth = 200.dp
 val PowerChartShrunkWidth = 120.dp
 val BackgroundColorDefault = Color(20, 20, 20)
 
+// Shown when a sensor hasn't reported a value yet
+const val SensorValuePlaceholderText = "-"
 @Composable
 fun Overlay(
     sensorViewModel: OverlaySensorViewModel,
@@ -50,56 +51,54 @@ fun Overlay(
     offsetCallback: (Float, Float) -> Unit,
     onLayout: (IntSize) -> Unit
 ) {
-    val placeholderText = "-"
-
-    val power by sensorViewModel.powerValue.collectAsStateWithLifecycle(initialValue = placeholderText)
+    val power by sensorViewModel.powerValue.collectAsStateWithLifecycle(initialValue = SensorValuePlaceholderText)
 
     val powerGraph = remember { sensorViewModel.powerGraph }
-    val rpm by sensorViewModel.rpmValue.collectAsStateWithLifecycle(initialValue = placeholderText)
-    val resistance by sensorViewModel.resistanceValue.collectAsStateWithLifecycle(initialValue = placeholderText)
-    val speed by sensorViewModel.speedValue.collectAsStateWithLifecycle(initialValue = placeholderText)
+    val rpm by sensorViewModel.rpmValue.collectAsStateWithLifecycle(initialValue = SensorValuePlaceholderText)
+    val resistance by sensorViewModel.resistanceValue.collectAsStateWithLifecycle(initialValue = SensorValuePlaceholderText)
+    val speed by sensorViewModel.speedValue.collectAsStateWithLifecycle(initialValue = SensorValuePlaceholderText)
     val speedLabel by sensorViewModel.speedLabel.collectAsStateWithLifecycle(initialValue = "")
     val timerLabel by timerViewModel.timerLabel.collectAsStateWithLifecycle(initialValue = "")
     val isTimerPaused by timerViewModel.timerPaused.collectAsStateWithLifecycle(initialValue = false)
     val errorMessage by sensorViewModel.errorMessage.collectAsStateWithLifecycle(initialValue = null)
 
-    var pauseChart by remember { mutableStateOf(true) }
+    var isCurrentlyAnimating by remember { mutableStateOf(false) }
 
-    val visibleFlow = remember {
-        sensorViewModel.isMinimized.onEach {
-            // If the visibility change used an animator, pause the graph
-            // This improves animation performance drastically
-            val isAnimatedVisibilityChange = pauseChart != it
-            pauseChart = isAnimatedVisibilityChange
-        }
+    LaunchedEffect(Unit) {
+        sensorViewModel.isMinimized
+            .drop(1) // Ignore the initial value since animations only happen after new updates
+            .collect {
+                isCurrentlyAnimating = true
+            }
     }
 
-    val minimized by visibleFlow.collectAsStateWithLifecycle(initialValue = false)
+    val minimized by sensorViewModel.isMinimized.collectAsStateWithLifecycle(initialValue = false)
     val location by remember { locationState }
     val size = remember { mutableStateOf(IntSize.Zero) }
 
 
-    val maxOffset = with(LocalDensity.current) {
-        (height * (1 - PercentVisibleWhenHidden)).roundToPx()
+    val mainContentHeight = with(LocalDensity.current) {
+        height.roundToPx()
     }
 
     val timerAlpha by animateFloatAsState(
         if (minimized) .5f else 1f,
-        animationSpec = TweenSpec(VisibilityChangeDuration, 0, LinearEasing)
+        animationSpec = TweenSpec(VisibilityChangeDurationMs, 0, LinearEasing)
     )
 
     val visibilityOffset by animateIntOffsetAsState(
         if (minimized) {
             when (location) {
-                OverlayLocation.Top -> IntOffset(0, -maxOffset)
-                OverlayLocation.Bottom -> IntOffset(0, maxOffset)
+                // When the main content is hidden, move it off screen completely
+                OverlayLocation.Top -> IntOffset(0, -mainContentHeight)
+                OverlayLocation.Bottom -> IntOffset(0, mainContentHeight)
             }
         } else {
             IntOffset.Zero
         },
-        animationSpec = TweenSpec(VisibilityChangeDuration, 0, LinearEasing),
+        animationSpec = TweenSpec(VisibilityChangeDurationMs, 0, LinearEasing),
         finishedListener = {
-            pauseChart = false
+            isCurrentlyAnimating = false
         }
     )
 
@@ -185,7 +184,7 @@ fun Overlay(
                 rowAlignment = rowAlignment,
                 power = power,
                 rpm = rpm,
-                pauseChart = pauseChart,
+                pauseChart = isCurrentlyAnimating,
                 powerGraph = powerGraph,
                 resistance = resistance,
                 speed = speed,
