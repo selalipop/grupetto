@@ -60,6 +60,7 @@ fun Overlay(
     val resistance by sensorViewModel.resistanceValue.collectAsStateWithLifecycle(initialValue = SensorValuePlaceholderText)
     val speed by sensorViewModel.speedValue.collectAsStateWithLifecycle(initialValue = SensorValuePlaceholderText)
     val speedLabel by sensorViewModel.speedLabel.collectAsStateWithLifecycle(initialValue = "")
+    val calories by sensorViewModel.caloriesValue.collectAsStateWithLifecycle(initialValue = SensorValuePlaceholderText)
     val timerLabel by timerViewModel.timerLabel.collectAsStateWithLifecycle(initialValue = "")
     val isTimerPaused by timerViewModel.timerPaused.collectAsStateWithLifecycle(initialValue = false)
     val errorMessage by sensorViewModel.errorMessage.collectAsStateWithLifecycle(initialValue = null)
@@ -192,6 +193,7 @@ fun Overlay(
                 resistance = resistance,
                 speed = speed,
                 speedLabel = speedLabel,
+                calories = calories,
                 onSpeedClicked = { sensorViewModel.onClickedSpeed() },
                 onChartClicked = { sensorViewModel.onOverlayPressed() }
             )

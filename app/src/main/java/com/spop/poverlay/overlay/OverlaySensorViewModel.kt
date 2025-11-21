@@ -21,10 +21,29 @@ import kotlin.time.Duration.Companion.milliseconds
 
 private const val MphToKph = 1.60934
 
+/**
+ * Calorie calculation constants using Gross Mechanical Efficiency (GME) method:
+ * 
+ * 1. Calculate mechanical work: Power (W) × Time (s) = Energy in Joules
+ * 2. Convert to mechanical kcal: Joules / 4184
+ * 3. Account for body efficiency: Metabolic kcal = Mechanical kcal / Efficiency
+ * 
+ * Cycling efficiency represents the ratio of mechanical power output to metabolic power input.
+ * Research shows typical values:
+ * - Recreational cyclists: ~20%
+ * - Average trained cyclists: ~22% (used here)
+ * - Well-trained/elite cyclists: ~25%
+ * 
+ * This matches industry-standard calculations used by Garmin, Wahoo, and other cycling computers.
+ */
+private const val CyclingEfficiency = 0.22 // 22% efficiency (typical for cycling)
+private const val CaloriesPerJoule = 4184.0 // Joules per kcal (thermochemical calorie definition)
+
 class OverlaySensorViewModel(
     application: Application,
     private val sensorInterface: SensorInterface,
-    private val deadSensorDetector: DeadSensorDetector
+    private val deadSensorDetector: DeadSensorDetector,
+    private val timerViewModel: OverlayTimerViewModel
 ) : AndroidViewModel(application) {
 
     companion object {
@@ -103,6 +122,43 @@ class OverlaySensorViewModel(
         }
     }
 
+    // Calculate calories burned by accumulating energy over time
+    // Calories (kcal) = Total Energy (Joules) / 4184 / Efficiency
+    private val accumulatedEnergy = MutableStateFlow(0.0)
+    
+    val caloriesValue = accumulatedEnergy.map { totalJoules ->
+        val calories = totalJoules / CaloriesPerJoule / CyclingEfficiency
+        "%.0f".format(calories)
+    }
+    
+    private fun setupCaloriesAccumulation() {
+        var lastUpdateTime = System.currentTimeMillis()
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            combine(
+                sensorInterface.power,
+                timerViewModel.elapsedSeconds
+            ) { watts, seconds -> 
+                Pair(watts, seconds)
+            }.collect { (watts, elapsedSeconds) ->
+                if (elapsedSeconds > 0) {
+                    val currentTime = System.currentTimeMillis()
+                    val deltaTimeSeconds = (currentTime - lastUpdateTime) / 1000.0
+                    
+                    // Energy = Power × Time (in joules)
+                    val energyDelta = watts * deltaTimeSeconds
+                    
+                    accumulatedEnergy.value += energyDelta
+                    lastUpdateTime = currentTime
+                } else {
+                    // Timer was reset
+                    accumulatedEnergy.value = 0.0
+                    lastUpdateTime = System.currentTimeMillis()
+                }
+            }
+        }
+    }
+
     val powerGraph = mutableStateListOf<Float>()
 
 
@@ -126,6 +182,8 @@ class OverlaySensorViewModel(
     // Happens last to ensure initialization order is correct
     init {
         setupPowerGraphData()
+        setupCaloriesAccumulation()
+        
         viewModelScope.launch(Dispatchers.IO) {
             deadSensorDetector.deadSensorDetected.collect {
                 onDeadSensor()

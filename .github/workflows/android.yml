@@ -1,27 +1,226 @@
-name: Android CI
+name: Android CI/CD
 
 on:
   push:
-    branches: [ "develop" ]
+    branches: [ "develop", "main" ]
   pull_request:
-    branches: [ "develop" ]
+    branches: [ "develop", "main" ]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: set up JDK 11
-      uses: actions/setup-java@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
       with:
-        java-version: '11'
+        fetch-depth: 0
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
         distribution: 'temurin'
         cache: gradle
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-    - name: Build with Gradle
-      run: ./gradlew build
+
+    - name: Setup debug keystore for release
+      run: |
+        # Create a debug keystore for release builds (for CI/CD purposes)
+        mkdir -p ~/.android
+        echo "Creating debug keystore for release signing..."
+        keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+
+    - name: Extract version info
+      id: version_info
+      run: |
+        VERSION_NAME=$(grep "versionName" app/build.gradle | cut -d'"' -f2)
+        VERSION_CODE=$(grep "versionCode" app/build.gradle | awk '{print $2}')
+        
+        # Get the latest tag and increment it
+        LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        echo "Latest tag found: $LATEST_TAG"
+        
+        # Extract version numbers (remove 'v' prefix and split by dots)
+        VERSION_NUMBERS=$(echo $LATEST_TAG | sed 's/^v//' | tr '.' ' ')
+        read -r MAJOR MINOR PATCH <<< "$VERSION_NUMBERS"
+        
+        # Default to 0.0.0 if parsing fails
+        MAJOR=${MAJOR:-0}
+        MINOR=${MINOR:-0}
+        PATCH=${PATCH:-0}
+        
+        # Increment patch version
+        NEW_PATCH=$((PATCH + 1))
+        NEW_TAG="v${MAJOR}.${MINOR}.${NEW_PATCH}"
+        
+        # Calculate new version code (increment current version code)
+        NEW_VERSION_CODE=$((VERSION_CODE + 1))
+        
+        echo "New tag will be: $NEW_TAG"
+        echo "New version code will be: $NEW_VERSION_CODE"
+        echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
+        echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_OUTPUT
+        echo "NEW_VERSION_CODE=$NEW_VERSION_CODE" >> $GITHUB_OUTPUT
+        echo "TAG_NAME=$NEW_TAG" >> $GITHUB_OUTPUT
+        echo "PREVIOUS_TAG=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+    - name: Update build.gradle versions
+      run: |
+        # Update versionName to match the new tag
+        sed -i "s/versionName \".*\"/versionName \"${{ steps.version_info.outputs.TAG_NAME }}\"/" app/build.gradle
+        
+        # Update versionCode to incremented value
+        sed -i "s/versionCode [0-9]*/versionCode ${{ steps.version_info.outputs.NEW_VERSION_CODE }}/" app/build.gradle
+        
+        # Verify changes
+        echo "Updated build.gradle versions:"
+        grep -E "(versionCode|versionName)" app/build.gradle
+
+    - name: Build release APK
+      run: ./gradlew assembleRelease
+
+    - name: List APK outputs
+      run: |
+        echo "Listing all APK files generated:"
+        find app/build/outputs/apk -name "*.apk" -type f || echo "No APK files found"
+        echo "Directory structure:"
+        ls -la app/build/outputs/apk/ || echo "APK output directory not found"
+    - name: Upload release APK as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-apk
+        path: app/build/outputs/apk/release/app-release.apk
+
+  release:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Extract version info
+      id: version_info
+      run: |
+        VERSION_NAME=$(grep "versionName" app/build.gradle | cut -d'"' -f2)
+        VERSION_CODE=$(grep "versionCode" app/build.gradle | awk '{print $2}')
+        
+        # Get the latest tag and increment it
+        LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        echo "Latest tag found: $LATEST_TAG"
+        
+        # Extract version numbers (remove 'v' prefix and split by dots)
+        VERSION_NUMBERS=$(echo $LATEST_TAG | sed 's/^v//' | tr '.' ' ')
+        read -r MAJOR MINOR PATCH <<< "$VERSION_NUMBERS"
+        
+        # Default to 0.0.0 if parsing fails
+        MAJOR=${MAJOR:-0}
+        MINOR=${MINOR:-0}
+        PATCH=${PATCH:-0}
+        
+        # Increment patch version
+        NEW_PATCH=$((PATCH + 1))
+        NEW_TAG="v${MAJOR}.${MINOR}.${NEW_PATCH}"
+        
+        # Calculate new version code (increment current version code)
+        NEW_VERSION_CODE=$((VERSION_CODE + 1))
+        
+        echo "New tag will be: $NEW_TAG"
+        echo "New version code will be: $NEW_VERSION_CODE"
+        echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
+        echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_OUTPUT
+        echo "NEW_VERSION_CODE=$NEW_VERSION_CODE" >> $GITHUB_OUTPUT
+        echo "TAG_NAME=$NEW_TAG" >> $GITHUB_OUTPUT
+        echo "PREVIOUS_TAG=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+    - name: Update build.gradle versions
+      run: |
+        # Update versionName to match the new tag
+        sed -i "s/versionName \".*\"/versionName \"${{ steps.version_info.outputs.TAG_NAME }}\"/" app/build.gradle
+        
+        # Update versionCode to incremented value
+        sed -i "s/versionCode [0-9]*/versionCode ${{ steps.version_info.outputs.NEW_VERSION_CODE }}/" app/build.gradle
+        
+        # Verify changes
+        echo "Updated build.gradle versions:"
+        grep -E "(versionCode|versionName)" app/build.gradle
+
+    - name: Commit version updates
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add app/build.gradle
+        git commit -m "Auto-update version to ${{ steps.version_info.outputs.TAG_NAME }} (build ${{ steps.version_info.outputs.NEW_VERSION_CODE }})" || echo "No changes to commit"
+        git push origin HEAD:${{ github.ref_name }} || echo "Failed to push version update"
+
+    - name: Download release APK
+      uses: actions/download-artifact@v4
+      with:
+        name: release-apk
+        path: ./
+
+    - name: Find and prepare APK
+      id: find_apk
+      run: |
+        # Find the APK file (could be signed or unsigned)
+        APK_FILE=$(find . -name "*.apk" -type f | head -1)
+        if [ -z "$APK_FILE" ]; then
+          echo "No APK file found!"
+          exit 1
+        fi
+        echo "Found APK: $APK_FILE"
+        echo "APK_PATH=$APK_FILE" >> $GITHUB_OUTPUT
+
+    - name: Create/Update tag
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git tag -a "${{ steps.version_info.outputs.TAG_NAME }}" -m "Release ${{ steps.version_info.outputs.TAG_NAME }}"
+        git push origin "${{ steps.version_info.outputs.TAG_NAME }}"
+
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      id: create_release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.version_info.outputs.TAG_NAME }}
+        release_name: "Grupetto ${{ steps.version_info.outputs.TAG_NAME }}"
+        body: |
+          ## Grupetto Release ${{ steps.version_info.outputs.TAG_NAME }}
+          
+          **Version:** ${{ steps.version_info.outputs.TAG_NAME }}
+          **Previous Version:** ${{ steps.version_info.outputs.PREVIOUS_TAG }}
+          **Build Code:** ${{ steps.version_info.outputs.NEW_VERSION_CODE }} (was ${{ steps.version_info.outputs.VERSION_CODE }})
+          **Commit:** ${{ github.sha }}
+          
+          ### Changes
+          - Automated release from ${{ github.ref_name }} branch
+          - Auto-incremented from ${{ steps.version_info.outputs.PREVIOUS_TAG }}
+          - Updated app/build.gradle with new version numbers
+          
+          ### Installation
+          Download the APK file below and install on your Android device.
+          
+          **Note:** You may need to enable "Install from unknown sources" in your device settings.
+        draft: false
+        prerelease: false
+
+    - name: Upload APK to Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: app-release.apk
+        asset_name: grupetto-${{ steps.version_info.outputs.TAG_NAME }}.apk
+        asset_content_type: application/vnd.android.package-archive
     

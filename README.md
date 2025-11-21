@@ -3,7 +3,7 @@
 
 &nbsp;
 
-**grupetto** is an app that creates a system-wide overlay with live statistics about your ride:
+**grupetto** is an app that creates a system-wide overlay with live statistics about your ride, and transmits the metrics as a BLE power meter.
 
 <p align="center">
 <img width="500" alt="Dougmeister" src="https://user-images.githubusercontent.com/17497673/192136344-e649bfd8-1d8b-452c-ab5f-9aff84118e25.gif">
@@ -24,26 +24,41 @@ your repository
 - [Installation](#installation)
 - [Usage](#usage)
 - [Implementation](#implementation)
-    * [Getting access to sensor data](#getting-access-to-sensor-data)
-        + [Exploring SerialPort](#exploring-serialport)
-        + [Establishing system service connection](#establishing-system-service-connection)
-    * [Android App Architecture](#android-app-architecture)
-    * [Other hardware](#other-hardware)
+  - [Getting access to sensor data](#getting-access-to-sensor-data)
+    - [Exploring SerialPort](#exploring-serialport)
+    - [Establishing system service connection](#establishing-system-service-connection)
+  - [Android App Architecture](#android-app-architecture)
+  - [Other hardware](#other-hardware)
 - [Reporting Issues](#reporting-issues)
 - [Unimplemented features](#unimplemented-features)
-- [Naming](#whats-with-the-name)
+- [What's with the name?](#whats-with-the-name)
 
 # Installation
 
-grupetto must be side-loaded onto the Peloton,
-follow [this guide](https://www.reddit.com/r/pelotoncycle/wiki/index/howto/root/) to learn how to
+grupetto must be side-loaded onto the Peloton, The easiest way is to use [OpenPelo](https://github.com/doudar/openpelo). You can either watch [this video](https://www.youtube.com/watch?v=Q5XIlXqa0Cg) , or follow the steps below to learn how to
 sideload an APK.
+1. Enable USB debugging on your Peloton:
+   - Make sure your bike sensor cable is connected to the Peloton Tablet.
+   - Go to Settings, system menu and perform a Firmware Reset.
+   - Select your language on the setup screen, but don't go any further. 
+   - Go to Settings.
+   - Go to Device Preferences.
+   - Tap 7 times on Build Number to enable Developer Options.
+   - Go back to Settings.
+   - Go To Developer Options.
+   - Enable USB debugging.
+   - Disable Verify apps over USB.
+   - Enable Gabeldorsche (if availiable).
+   - Plug your computer into the Peloton using a micro USB-B cable.  
+   - Select "always allow this computer" and allow USB debugging. 
+2. Run OpenPelo:
+   - Double-click the downloaded executable.
+   - The installer will automatically check for your device.
+   - Wait for the "✅ Device connected" status.
+   - Select the apps you want to install by checking the boxes (grupetto is one of the options).
+   - Click "Install Selected Apps" and wait for the installation to complete.
 
 After following those steps, the APK for grupetto can be found on the Releases tab above.
-
-Note: Unfortunately, sideloading functionality was recently locked behind a valid subscription. At
-the time of writing, once the overlay has been installed its continued function is not tied to a
-subscription. (this is subject to change)
 
 # Usage
 

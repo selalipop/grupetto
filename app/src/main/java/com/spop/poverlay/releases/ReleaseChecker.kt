@@ -16,7 +16,7 @@ class ReleaseChecker(
         const val GithubHeaderAccept = "application/vnd.github+json"
         val GithubFormatDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
 
-        const val ReleaseEndpoint = "https://api.github.com/repos/selalipop/grupetto/releases"
+        const val ReleaseEndpoint = "https://api.github.com/repos/doudar/grupetto/releases"
     }
 
     suspend fun getLatestRelease(): Result<Release?> {

@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
@@ -21,12 +22,15 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.spop.poverlay.ConfigurationRepository
 import com.spop.poverlay.MainActivity
 import com.spop.poverlay.R
+
+import com.spop.poverlay.sensor.CadenceWatchdog
 import com.spop.poverlay.sensor.DeadSensorDetector
 import com.spop.poverlay.sensor.interfaces.DummySensorInterface
 import com.spop.poverlay.sensor.interfaces.PelotonBikeSensorInterfaceV1New
@@ -64,12 +68,20 @@ class OverlayService : LifecycleEnabledService() {
     }
 
 
+    
+
     override fun onCreate() {
         super.onCreate()
-
-        val notificationManager = NotificationManagerCompat.from(this)
-        startForeground(OverlayServiceId, prepareNotification(notificationManager))
-
+        val notification = prepareNotification(NotificationManagerCompat.from(this))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                OverlayServiceId, 
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
+        } else {
+            startForeground(OverlayServiceId, notification)
+        }
         buildDialog()
     }
 
@@ -113,17 +125,38 @@ class OverlayService : LifecycleEnabledService() {
             EmulatorSensorInterface
         }
 
+        val timerViewModel = OverlayTimerViewModel(
+            application,
+            ConfigurationRepository(applicationContext, this),
+            sensorInterface.power
+        )
+
         val sensorViewModel = OverlaySensorViewModel(
             application,
             sensorInterface,
-            DeadSensorDetector(sensorInterface, this.coroutineContext)
+            DeadSensorDetector(sensorInterface, this.coroutineContext),
+            timerViewModel
         )
 
-        val timerViewModel = OverlayTimerViewModel(
-            application,
-            ConfigurationRepository(applicationContext, this)
-        )
         val dialogViewModel = OverlayDialogViewModel(screenSize, sensorViewModel.isMinimized)
+
+        // Initialize and start watchdog (always enabled)
+        val watchdog = CadenceWatchdog(sensorInterface, this.coroutineContext)
+        watchdog.start()
+        
+        lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onDestroy(owner: LifecycleOwner) {
+                watchdog.stop()
+            }
+        })
+        
+        // Handle watchdog restart trigger
+        lifecycleScope.launchWhenStarted {
+            watchdog.restartTriggered.collect {
+                Timber.w("Watchdog triggered restart - no cadence detected for 1 hour")
+                restartToOverlay()
+            }
+        }
 
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -243,6 +276,22 @@ class OverlayService : LifecycleEnabledService() {
         if (v.parent is View) {
             disableClipOnParents(v.parent as View)
         }
+    }
+
+    private fun restartToOverlay() {
+        Timber.i("Restarting Grupetto to overlay due to watchdog trigger")
+        
+        // Stop the current service
+        stopSelf()
+        
+        // Start the overlay service again
+        val restartIntent = Intent(this, OverlayService::class.java)
+        ContextCompat.startForegroundService(this, restartIntent)
+        
+        // Exit the process to ensure clean restart
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            Runtime.getRuntime().exit(0)
+        }, 500)
     }
 
     private fun prepareNotification(notificationManager: NotificationManagerCompat): Notification {

@@ -26,6 +26,7 @@ fun OverlayMainContent(
     resistance: String,
     speed: String,
     speedLabel: String,
+    calories: String,
     pauseChart : Boolean,
     onSpeedClicked : ()->Unit,
     onChartClicked : ()->Unit
@@ -74,6 +75,8 @@ fun OverlayMainContent(
         StatCard("Speed", speed, speedLabel, statCardModifier.clickable {
             onSpeedClicked()
         })
+
+        StatCard("Calories", calories, "kcal", statCardModifier)
 
     }
 }

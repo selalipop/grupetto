@@ -13,7 +13,7 @@ val IsRunningOnPeloton = Build.BRAND == PelotonBrand
  * I'm assuming that the model name is the same for all Peloton Bike+ devices based on what I'm able
  * to find online.
  */
-val IsBikePlus = Build.MODEL == "PLTN-TTR01"
+val IsBikePlus = Build.MODEL.startsWith("PLTN-TTR01")
 
 fun calculateSpeedFromPelotonV1Power(power: Float) =
     if (power < 0.1f) {

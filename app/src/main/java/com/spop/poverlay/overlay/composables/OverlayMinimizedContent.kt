@@ -129,14 +129,14 @@ fun OverlayMinimizedContent(
             Spacer(modifier = Modifier.width(4.dp))
             OverlayTimerField(
                 modifier = Modifier.width(58.dp),
-                timerLabel = speedLabel,
-                iconDrawable = R.drawable.ic_speed
+                timerLabel = resistanceLabel,
+                iconDrawable = R.drawable.ic_resistance
             )
             Spacer(modifier = Modifier.width(4.dp))
             OverlayTimerField(
                 modifier = Modifier.width(58.dp),
-                timerLabel = resistanceLabel,
-                iconDrawable = R.drawable.ic_resistance
+                timerLabel = speedLabel,
+                iconDrawable = R.drawable.ic_speed
             )
         }
     }
