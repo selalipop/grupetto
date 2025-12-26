@@ -4,8 +4,9 @@ import android.os.Build
 import android.text.format.DateUtils
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material3.*
+import androidx.compose.material.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -19,7 +20,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.spop.poverlay.releases.Release
 import com.spop.poverlay.ui.theme.ErrorColor
 import com.spop.poverlay.ui.theme.LatoFontFamily
@@ -41,8 +41,8 @@ fun ConfigurationPage(
             PermissionPage(viewModel::onGrantPermissionClicked)
         } else {
             val timerShownWhenMinimized by viewModel.showTimerWhenMinimized
-                .collectAsStateWithLifecycle(
-                    initialValue = true
+                .collectAsState(
+                    initial = true
                 )
             StartServicePage(
                 timerShownWhenMinimized,
@@ -76,7 +76,14 @@ private fun StartServicePage(
         fontStyle = FontStyle.Italic,
         fontWeight = FontWeight.Bold
     )
-    Spacer(modifier = Modifier.height(180.dp))
+    Spacer(modifier = Modifier.height(20.dp))
+    Text(
+        text = "Nov 2025 Update with colored metrics, charts, and max",
+        fontSize = 18.sp,
+        fontStyle = FontStyle.Italic,
+        color = Color.Gray
+    )
+    Spacer(modifier = Modifier.height(140.dp))
     Button(
         onClick = onClickedStartOverlay,
     ) {
@@ -108,7 +115,7 @@ private fun StartServicePage(
         val formattedDate = DateUtils.getRelativeTimeSpanString(latestRelease.createdAt.time)
         val releaseText = if (latestRelease.isCurrentlyInstalled) {
             buildAnnotatedString {
-                "Grupetto is up to date: ${latestRelease.tagName} • $formattedDate • ${latestRelease.friendlyName}"
+                append("Grupetto is up to date: ${latestRelease.tagName} • $formattedDate • ${latestRelease.friendlyName}")
             }
         } else {
             buildAnnotatedString {
@@ -133,7 +140,7 @@ private fun StartServicePage(
     Spacer(modifier = Modifier.height(40.dp))
     Button(
         onClick = onClickedRestartApp,
-        colors = ButtonDefaults.buttonColors(containerColor = ErrorColor),
+        colors = ButtonDefaults.buttonColors(backgroundColor = ErrorColor),
     ) {
         Text(
             text = "Restart Grupetto",

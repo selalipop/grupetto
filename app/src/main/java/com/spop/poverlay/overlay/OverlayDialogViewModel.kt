@@ -28,7 +28,7 @@ class OverlayDialogViewModel(
     val minimizedDialogSizeParams = MutableStateFlow(LayoutParams.WRAP_CONTENT to LayoutParams.WRAP_CONTENT)
     val partialOverlayFlags = MutableStateFlow(0)
     val touchTargetVisiblity = MutableStateFlow(View.GONE)
-    val dialogLocation = MutableStateFlow(OverlayLocation.Bottom)
+    val dialogLocation = MutableStateFlow(OverlayLocation.Top)
     val dialogGravity = MutableStateFlow(dialogLocation.value.gravity)
 
 

@@ -16,3 +16,12 @@
 local.properties
 app/release
 app/debug
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# Signing
+keystore.properties
+*.jks
+*.keystore

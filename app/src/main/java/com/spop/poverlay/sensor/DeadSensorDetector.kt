@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.coroutines.InternalCoroutinesApi::class)
+
 package com.spop.poverlay.sensor
 
 import com.spop.poverlay.sensor.interfaces.SensorInterface
@@ -6,17 +8,20 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
-import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
 
 /**
  * At times the Peloton sensor service stops responding until the Bike is power cycled
  * This class monitors for this
  */
+@OptIn(ExperimentalTime::class)
 class DeadSensorDetector(
     private val sensorInterface: SensorInterface,
     override val coroutineContext: CoroutineContext,
@@ -36,11 +41,11 @@ class DeadSensorDetector(
 
     companion object {
         // Max time between sensor updates before the user is shown the dead sensor message
-        val DeadSensorTimeout = 10.seconds
+        val DeadSensorTimeout = Duration.seconds(10)
 
         // Once the dead sensor warning has been shown,
         // wait at least this long before showing it again
-        val DeadSensorWarningInterval = 5.minutes
+        val DeadSensorWarningInterval = Duration.minutes(5)
     }
 
     private val resetTimeoutChannel = Channel<Unit>()
@@ -54,19 +59,25 @@ class DeadSensorDetector(
     // Whenever a value is received for a sensor, reset the dead sensor timeout
     private fun setupTimeoutReset() {
         launch(Dispatchers.IO) {
-            sensorInterface.power.collect {
-                resetTimeoutChannel.trySend(Unit)
-            }
+            sensorInterface.power.collect(object : FlowCollector<Float> {
+                override suspend fun emit(value: Float) {
+                    resetTimeoutChannel.trySend(Unit)
+                }
+            })
         }
         launch(Dispatchers.IO) {
-            sensorInterface.resistance.collect {
-                resetTimeoutChannel.trySend(Unit)
-            }
+            sensorInterface.resistance.collect(object : FlowCollector<Float> {
+                override suspend fun emit(value: Float) {
+                    resetTimeoutChannel.trySend(Unit)
+                }
+            })
         }
         launch(Dispatchers.IO) {
-            sensorInterface.cadence.collect {
-                resetTimeoutChannel.trySend(Unit)
-            }
+            sensorInterface.cadence.collect(object : FlowCollector<Float> {
+                override suspend fun emit(value: Float) {
+                    resetTimeoutChannel.trySend(Unit)
+                }
+            })
         }
     }
 

@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.coroutines.InternalCoroutinesApi::class)
+
 package com.spop.poverlay.overlay
 
 import android.app.Notification
@@ -21,8 +23,8 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.lifecycleScope
 import com.spop.poverlay.ConfigurationRepository
 import com.spop.poverlay.MainActivity
@@ -35,6 +37,8 @@ import com.spop.poverlay.util.IsBikePlus
 import com.spop.poverlay.util.IsRunningOnPeloton
 import com.spop.poverlay.util.LifecycleEnabledService
 import com.spop.poverlay.util.disableAnimations
+import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import timber.log.Timber
 import java.util.*
@@ -93,16 +97,16 @@ class OverlayService : LifecycleEnabledService() {
         val sensorInterface = if (IsRunningOnPeloton) {
             if (IsBikePlus) {
                 PelotonBikePlusSensorInterface(this).also {
-                    lifecycle.addObserver(object : DefaultLifecycleObserver {
-                        override fun onDestroy(owner: LifecycleOwner) {
+                    lifecycle.addObserver(LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_DESTROY) {
                             it.stop()
                         }
                     })
                 }
             } else {
                 PelotonBikeSensorInterfaceV1New(this).also {
-                    lifecycle.addObserver(object : DefaultLifecycleObserver {
-                        override fun onDestroy(owner: LifecycleOwner) {
+                    lifecycle.addObserver(LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_DESTROY) {
                             it.stop()
                         }
                     })
@@ -123,6 +127,9 @@ class OverlayService : LifecycleEnabledService() {
             application,
             ConfigurationRepository(applicationContext, this)
         )
+        // Wire up timer to auto-start/pause based on movement
+        timerViewModel.observeMovement(sensorViewModel.isMoving, sensorViewModel.sessionReset)
+
         val dialogViewModel = OverlayDialogViewModel(screenSize, sensorViewModel.isMinimized)
 
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -229,7 +236,9 @@ class OverlayService : LifecycleEnabledService() {
                 disableClipOnParents(overlayView)
                 wm.updateViewLayout(overlayView, overlayParams)
                 wm.updateViewLayout(touchTargetView, touchTargetParams)
-            }.collect {}
+            }.collect(object : FlowCollector<Unit> {
+                override suspend fun emit(value: Unit) {}
+            })
         }
     }
 

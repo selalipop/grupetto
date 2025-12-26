@@ -3,7 +3,8 @@ package com.spop.poverlay
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -42,8 +43,8 @@ class ConfigurationRepository(context: Context, lifecycleOwner: LifecycleOwner) 
         listener = createSharedPreferencesListener()
         SharedPreferenceListeners.add(listener)
         sharedPreferences.registerOnSharedPreferenceChangeListener(listener)
-        lifecycleOwner.lifecycle.addObserver(object : DefaultLifecycleObserver{
-            override fun onStop(owner: LifecycleOwner) {
+        lifecycleOwner.lifecycle.addObserver(LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
                 close()
             }
         })

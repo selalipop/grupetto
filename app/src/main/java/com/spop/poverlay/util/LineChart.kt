@@ -2,7 +2,7 @@ package com.spop.poverlay.util
 
 import android.view.ViewGroup
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -22,11 +22,11 @@ fun LineChart(
     fillColor: Color = Color.LightGray,
     lineColor: Color = Color.DarkGray,
 ) {
-    val graph = remember { data }
-
-    AndroidView(
-        modifier = modifier,
-        factory = { context ->
+    // Use key to force recreation when colors, maxValue, or data source change
+    key(lineColor, fillColor, maxValue, data) {
+        AndroidView(
+            modifier = modifier,
+            factory = { context ->
             LiveChart(context).apply {
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -48,7 +48,7 @@ fun LineChart(
         },
         update = { view ->
             if (!pauseChart) {
-                view.setDataset(Dataset(graph.mapIndexed { index, value ->
+                view.setDataset(Dataset(data.mapIndexed { index, value ->
                     //Start values at 1f to keep line visible at all times
                     DataPoint(index.toFloat(), value.toFloat().coerceIn(1f, maxValue))
                 }.toMutableList()))
@@ -69,5 +69,6 @@ fun LineChart(
                     .drawDataset()
             }
         }
-    )
+        )
+    }
 }

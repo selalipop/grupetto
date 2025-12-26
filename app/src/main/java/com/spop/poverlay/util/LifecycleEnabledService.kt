@@ -6,7 +6,7 @@ import androidx.lifecycle.*
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
-import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import androidx.savedstate.ViewTreeSavedStateRegistryOwner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -29,7 +29,7 @@ abstract class LifecycleEnabledService : Service(), LifecycleOwner, ViewModelSto
     protected fun View.lifecycleViaService() {
         ViewTreeLifecycleOwner.set(this, this@LifecycleEnabledService)
         ViewTreeViewModelStoreOwner.set(this, this@LifecycleEnabledService)
-        setViewTreeSavedStateRegistryOwner(this@LifecycleEnabledService)
+        ViewTreeSavedStateRegistryOwner.set(this, this@LifecycleEnabledService)
     }
 
     private val serviceViewModelStore = ViewModelStore()
@@ -39,8 +39,8 @@ abstract class LifecycleEnabledService : Service(), LifecycleOwner, ViewModelSto
         SavedStateRegistryController.create(this)
     }
 
-    override val savedStateRegistry: SavedStateRegistry
-        get() = serviceSavedStateRegistry.savedStateRegistry
+    override fun getSavedStateRegistry(): SavedStateRegistry =
+        serviceSavedStateRegistry.savedStateRegistry
 
     private val lifecycleRegistry: LifecycleRegistry by lazy {
         LifecycleRegistry(this)

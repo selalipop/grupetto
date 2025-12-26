@@ -1,13 +1,17 @@
+@file:OptIn(kotlinx.coroutines.InternalCoroutinesApi::class)
 
 package com.spop.poverlay.util
 
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
 
 //Imported from declined PR to main Kotlin Flow repository
 
@@ -38,16 +42,18 @@ fun <T, R> Flow<T>.windowed(size: Int, step: Int, partialWindows: Boolean, trans
         val toSkip = max(step - size, 0)
         var skipped = toSkip
 
-        collect { value ->
-            if (toSkip == skipped) buffer.addLast(value)
-            else skipped++
+        this@windowed.collect(object : FlowCollector<T> {
+            override suspend fun emit(value: T) {
+                if (toSkip == skipped) buffer.addLast(value)
+                else skipped++
 
-            if (buffer.size == size) {
-                emit(transform(buffer))
-                repeat(toDrop) { buffer.removeFirst() }
-                skipped = 0
+                if (buffer.size == size) {
+                    this@flow.emit(transform(buffer))
+                    repeat(toDrop) { buffer.removeFirst() }
+                    skipped = 0
+                }
             }
-        }
+        })
 
         while (partialWindows && buffer.isNotEmpty()) {
             emit(transform(buffer))
@@ -56,7 +62,7 @@ fun <T, R> Flow<T>.windowed(size: Int, step: Int, partialWindows: Boolean, trans
     }
 }
 
-//https://stackoverflow.com/a/54828055/3808828
+@ExperimentalTime
 fun tickerFlow(period: Duration, initialDelay: Duration = Duration.ZERO) = flow {
     delay(initialDelay)
     while (true) {
