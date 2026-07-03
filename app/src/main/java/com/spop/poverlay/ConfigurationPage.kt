@@ -65,6 +65,8 @@ fun ConfigurationPage(viewModel: ConfigurationViewModel) {
                         )
                 val bleTxEnabled by
                         viewModel.bleTxEnabled.collectAsStateWithLifecycle(initialValue = false)
+                val dirConEnabled by
+                        viewModel.dirConEnabled.collectAsStateWithLifecycle(initialValue = true)
                 val bleFtmsDeviceName by
                         viewModel.bleFtmsDeviceName.collectAsStateWithLifecycle(
                                 initialValue = "Grupetto FTMS"
@@ -86,6 +88,8 @@ fun ConfigurationPage(viewModel: ConfigurationViewModel) {
                         viewModel::onShowTimerWhenMinimizedClicked,
                         bleTxEnabled,
                         viewModel::onBleTxEnabledClicked,
+                        dirConEnabled,
+                        viewModel::onDirConEnabledClicked,
                         bleFtmsDeviceName,
                         hrConnectedDevice,
                         hrDiscoveredDevices,
@@ -116,6 +120,8 @@ private fun StartServicePage(
         onTimerShownWhenMinimizedToggled: (Boolean) -> Unit,
         bleTxEnabled: Boolean,
         onBleTxEnabledToggled: (Boolean) -> Unit,
+        dirConEnabled: Boolean,
+        onDirConEnabledToggled: (Boolean) -> Unit,
         bleFtmsDeviceName: String,
         hrConnectedDevice: HeartRateDevice?,
         hrDiscoveredDevices: List<HeartRateDevice>,
@@ -227,14 +233,14 @@ private fun StartServicePage(
                     elevation = uiScale.dp(4f)
             ) {
                 Column(modifier = Modifier.padding(cardPadding)) {
-                    Text("BLE Preference", fontSize = uiScale.sp(18f), fontWeight = FontWeight.Bold, color = headingColor)
+                    Text("Broadcast", fontSize = uiScale.sp(18f), fontWeight = FontWeight.Bold, color = headingColor)
                     Spacer(modifier = Modifier.height(uiScale.dp(8f)))
                     Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Enable BLE TX", fontSize = uiScale.sp(16f), color = bodyColor)
+                        Text("BLE", fontSize = uiScale.sp(16f), color = bodyColor)
                         Switch(
                                 checked = bleTxEnabled,
                                 onCheckedChange = onBleTxEnabledToggled,
@@ -245,7 +251,23 @@ private fun StartServicePage(
                         )
                     }
                     Spacer(modifier = Modifier.height(uiScale.dp(8f)))
-                    if (bleTxEnabled) {
+                    Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("DIRCON WiFi", fontSize = uiScale.sp(16f), color = bodyColor)
+                        Switch(
+                                checked = dirConEnabled,
+                                onCheckedChange = onDirConEnabledToggled,
+                                colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color(0xFF22C55E),
+                                        checkedTrackColor = Color(0xFF22C55E)
+                                )
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(uiScale.dp(8f)))
+                    if (bleTxEnabled || dirConEnabled) {
                         Text(
                                 text = "Broadcasting as",
                                 fontSize = uiScale.sp(14f),
@@ -259,7 +281,7 @@ private fun StartServicePage(
                         )
                     } else {
                         Text(
-                                text = "Enable BLE TX to broadcast bike data to apps like Zwift or TrainerRoad.",
+                                text = "Enable BLE or DIRCON to broadcast bike data to apps like Zwift or TrainerRoad.",
                                 fontSize = uiScale.sp(13f),
                                 color = bodyColor
                         )

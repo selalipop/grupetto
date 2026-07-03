@@ -85,6 +85,7 @@ class CyclingPowerService(server: BleServer) : BaseBleService(server) {
         )
 
         measurementCharacteristic.setValue(bytes)
+        server.notifyDirConCharacteristicChanged(measurementCharacteristic)
         for (device in connectedDevices) {
             server.notifyCharacteristicChanged(device, measurementCharacteristic, false)
         }

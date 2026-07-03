@@ -122,6 +122,7 @@ class FitnessMachineService(server: BleServer) : BaseBleService(server) {
                     trainingStatusCharacteristic.setValue(
                         byteArrayOf(0x00, FitnessMachineConstants.TrainingStatus.Idle.toByte())
                     )
+                    server.notifyDirConCharacteristicChanged(trainingStatusCharacteristic)
                     for (d in connectedDevices) {
                         server.notifyCharacteristicChanged(d, trainingStatusCharacteristic, false)
                     }
@@ -132,6 +133,7 @@ class FitnessMachineService(server: BleServer) : BaseBleService(server) {
                     trainingStatusCharacteristic.setValue(
                         byteArrayOf(0x00, FitnessMachineConstants.TrainingStatus.ManualMode.toByte())
                     )
+                    server.notifyDirConCharacteristicChanged(trainingStatusCharacteristic)
                     for (d in connectedDevices) {
                         server.notifyCharacteristicChanged(d, trainingStatusCharacteristic, false)
                     }
@@ -142,6 +144,7 @@ class FitnessMachineService(server: BleServer) : BaseBleService(server) {
                     trainingStatusCharacteristic.setValue(
                         byteArrayOf(0x00, FitnessMachineConstants.TrainingStatus.Idle.toByte())
                     )
+                    server.notifyDirConCharacteristicChanged(trainingStatusCharacteristic)
                     for (d in connectedDevices) {
                         server.notifyCharacteristicChanged(d, trainingStatusCharacteristic, false)
                     }
@@ -160,6 +163,7 @@ class FitnessMachineService(server: BleServer) : BaseBleService(server) {
                 (result and 0xFF).toByte()
             )
             controlPointCharacteristic.setValue(response)
+            server.notifyDirConCharacteristicChanged(controlPointCharacteristic)
             // FTMS mandates indications for Control Point
             server.notifyCharacteristicChanged(device, controlPointCharacteristic, true)
 
@@ -197,6 +201,7 @@ class FitnessMachineService(server: BleServer) : BaseBleService(server) {
             (powerValue and 0xFF).toByte(),
             (powerValue shr 8 and 0xFF).toByte()
     ))
+        server.notifyDirConCharacteristicChanged(indoorBikeDataCharacteristic)
 
         for (device in connectedDevices) {
             server.notifyCharacteristicChanged(device, indoorBikeDataCharacteristic, false)
@@ -207,6 +212,7 @@ class FitnessMachineService(server: BleServer) : BaseBleService(server) {
         val currentStatus = trainingStatusCharacteristic.getValue()
         if (currentStatus == null || currentStatus.size < 2 || currentStatus[1] != newStatus) {
             trainingStatusCharacteristic.setValue(byteArrayOf(0x00, newStatus))
+            server.notifyDirConCharacteristicChanged(trainingStatusCharacteristic)
             for (device in connectedDevices) {
                 server.notifyCharacteristicChanged(device, trainingStatusCharacteristic, false)
             }

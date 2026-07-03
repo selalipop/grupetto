@@ -50,6 +50,7 @@ class HeartRateService(server: BleServer) : BaseBleService(server) {
                 (heartRate and 0xFF).toByte()
             )
         )
+        server.notifyDirConCharacteristicChanged(measurementCharacteristic)
 
         for (device in connectedDevices) {
             server.notifyCharacteristicChanged(device, measurementCharacteristic, false)

@@ -451,8 +451,17 @@ class OverlayService : LifecycleEnabledService() {
     }
 
     private fun syncBackgroundExecutionGuards() {
-        if (isBleTxEnabled() && hasBleRuntimePermissions()) {
+        val bleEnabled = isBleTxEnabled()
+        val dirConEnabled = isDirConEnabled()
+
+        bleServer.stop()
+        bleServer.setDirConTransportEnabled(dirConEnabled)
+
+        if (bleEnabled && hasBleRuntimePermissions()) {
             bleServer.start()
+        }
+
+        if ((bleEnabled && hasBleRuntimePermissions()) || dirConEnabled) {
             acquireWakeLock()
         } else {
             releaseWakeLock()
@@ -462,6 +471,11 @@ class OverlayService : LifecycleEnabledService() {
     private fun isBleTxEnabled(): Boolean {
         val prefs = getSharedPreferences(ConfigurationRepository.SharedPrefsName, MODE_PRIVATE)
         return prefs.getBoolean(ConfigurationRepository.Preferences.BleTxEnabled.key, true)
+    }
+
+    private fun isDirConEnabled(): Boolean {
+        val prefs = getSharedPreferences(ConfigurationRepository.SharedPrefsName, MODE_PRIVATE)
+        return prefs.getBoolean(ConfigurationRepository.Preferences.DirConEnabled.key, true)
     }
 
     private fun hasBleRuntimePermissions(): Boolean {

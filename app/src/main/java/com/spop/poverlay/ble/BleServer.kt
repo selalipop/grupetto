@@ -13,6 +13,9 @@ import android.content.pm.PackageManager
 import android.os.ParcelUuid
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import com.spop.poverlay.dircon.DirConGattBridge
+import com.spop.poverlay.dircon.DirConServer
+import com.spop.poverlay.dircon.toDirConService
 import com.spop.poverlay.sensor.heartrate.HeartRateManager
 import com.spop.poverlay.sensor.interfaces.SensorInterface
 import java.util.LinkedList
@@ -105,6 +108,9 @@ class BleServer(
     private var gattServer: BluetoothGattServer? = null
     private var advertiser: BluetoothLeAdvertiser? = null
     private val registeredServices = mutableListOf<BaseBleService>()
+    private var dirConServer: DirConServer? = null
+    private var dirConTransportEnabled = true
+    private var isDirConOnlyStarted = false
     private val servicesToRegister = LinkedList<BaseBleService>()
     private var currentlyRegisteringService: BaseBleService? = null
     private var serviceAddTimeoutJob: Job? = null
@@ -180,6 +186,27 @@ class BleServer(
         registerNextService()
     }
 
+    private val dirConBridge = object : DirConGattBridge {
+        override fun services() = registeredServices.map { it.service.toDirConService() }
+
+        override fun readCharacteristic(uuid: UUID): ByteArray? {
+            val characteristic = findGattCharacteristic(uuid) ?: return null
+            return characteristicValue(characteristic)
+        }
+
+        override fun writeCharacteristic(uuid: UUID, value: ByteArray): Boolean {
+            val characteristic = findGattCharacteristic(uuid) ?: return false
+            val writable = characteristic.properties and
+                (BluetoothGattCharacteristic.PROPERTY_WRITE or
+                    BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0
+            if (!writable) return false
+
+            @Suppress("DEPRECATION")
+            characteristic.value = value
+            return true
+        }
+    }
+
     private fun baseServices(heartRateEnabled: Boolean): List<BaseBleService> {
         val services = mutableListOf<BaseBleService>(
             FitnessMachineService(this),
@@ -197,6 +224,9 @@ class BleServer(
         if (isServerStarted) {
             Timber.d("BLE server already started, ignoring duplicate start()")
             return
+        }
+        if (isDirConOnlyStarted) {
+            stopDirConOnly()
         }
         val bluetoothAdapter = bluetoothManager.adapter
         if (bluetoothAdapter == null) {
@@ -268,6 +298,7 @@ class BleServer(
             serviceAddTimeoutJob?.cancel()
             serviceAddTimeoutJob = null
             startAdvertising()
+            startDirCon()
             startSensorDataUpdates()
         } else {
             currentlyRegisteringService = servicesToRegister.pop()
@@ -298,9 +329,11 @@ class BleServer(
     fun stop() {
         try {
             isServerStarted = false
+            isDirConOnlyStarted = false
             stopWatchdog()
             stopSensorDataUpdates()
             stopHeartRateServiceWatcher()
+            stopDirCon()
             stopAdvertising()
             
             // Unregister Bluetooth state change receiver
@@ -350,6 +383,49 @@ class BleServer(
         }
     }
 
+    fun setDirConTransportEnabled(enabled: Boolean) {
+        dirConTransportEnabled = enabled
+        if (enabled) {
+            if (isServerStarted) {
+                startDirCon()
+            } else {
+                startDirConOnly()
+            }
+        } else if (isDirConOnlyStarted) {
+            stopDirConOnly()
+        } else {
+            stopDirCon()
+        }
+    }
+
+    fun startDirConOnly() {
+        if (!dirConTransportEnabled || isServerStarted || isDirConOnlyStarted) {
+            return
+        }
+
+        heartRateServiceEnabled = HeartRateManager.connectedDevice.value != null
+        registeredServices.clear()
+        registeredServices.addAll(baseServices(heartRateEnabled = heartRateServiceEnabled))
+        startDirCon()
+        startSensorDataUpdates()
+        isDirConOnlyStarted = true
+        Timber.i("DIRCON-only transport started")
+    }
+
+    fun stopDirConOnly() {
+        if (!isDirConOnlyStarted) {
+            stopDirCon()
+            return
+        }
+
+        stopDirCon()
+        stopSensorDataUpdates()
+        registeredServices.clear()
+        isDirConOnlyStarted = false
+        heartRateServiceEnabled = false
+        Timber.i("DIRCON-only transport stopped")
+    }
+
     private fun startHeartRateServiceWatcher() {
         heartRateServiceWatcherJob?.cancel()
         heartRateServiceWatcherJob = launch {
@@ -374,6 +450,7 @@ class BleServer(
         Timber.i("Heart rate BLE service ${if (enable) "enabled" else "disabled"}")
 
         stopSensorDataUpdates()
+        stopDirCon()
         stopAdvertising()
         gattServer?.clearServices()
         registeredServices.clear()
@@ -382,6 +459,23 @@ class BleServer(
 
         servicesToRegister.addAll(baseServices(heartRateEnabled = enable))
         registerNextService()
+    }
+
+    private fun startDirCon() {
+        if (!dirConTransportEnabled || dirConServer != null || registeredServices.isEmpty()) {
+            return
+        }
+
+        dirConServer = DirConServer(
+            context = context,
+            bridge = dirConBridge,
+            serialNumberProvider = { serialNumber() }
+        ).also { it.start() }
+    }
+
+    private fun stopDirCon() {
+        dirConServer?.stop()
+        dirConServer = null
     }
 
     fun notifyCharacteristicChanged(
@@ -413,6 +507,13 @@ class BleServer(
         } catch (e: SecurityException) {
             Timber.e(e, "Missing bluetooth permissions")
         }
+    }
+
+    fun notifyDirConCharacteristicChanged(characteristic: BluetoothGattCharacteristic) {
+        dirConServer?.notifyCharacteristicChanged(
+            characteristic.uuid,
+            characteristicValue(characteristic)
+        )
     }
 
     fun sendResponse(
@@ -732,6 +833,13 @@ class BleServer(
 
     private fun findServiceForCharacteristic(uuid: UUID?): BaseBleService? {
         return registeredServices.firstOrNull { it.service.uuid == uuid }
+    }
+
+    private fun findGattCharacteristic(uuid: UUID): BluetoothGattCharacteristic? {
+        return registeredServices
+            .asSequence()
+            .flatMap { it.service.characteristics.asSequence() }
+            .firstOrNull { it.uuid == uuid }
     }
 
     override fun onCharacteristicWriteRequest(

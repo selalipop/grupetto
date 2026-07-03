@@ -80,6 +80,7 @@ class CyclingSpeedAndCadenceService(server: BleServer) : BaseBleService(server) 
             bytes.add(((crankTime shr 8) and 0xFF).toByte())
         }
         measurementCharacteristic.setValue(bytes.toByteArray())
+        server.notifyDirConCharacteristicChanged(measurementCharacteristic)
 
         for (device in connectedDevices) {
             server.notifyCharacteristicChanged(device, measurementCharacteristic, false)

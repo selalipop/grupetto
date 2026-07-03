@@ -52,6 +52,9 @@ class ConfigurationViewModel(
     val bleTxEnabled
         get() = configurationRepository.bleTxEnabled
 
+    val dirConEnabled
+        get() = configurationRepository.dirConEnabled
+
     val bleFtmsDeviceName
         get() = configurationRepository.bleFtmsDeviceName
 
@@ -61,10 +64,7 @@ class ConfigurationViewModel(
     init {
         updatePermissionState()
         HeartRateManager.start(getApplication())
-        if (bleTxEnabled.value && hasBluetoothPermissions()) {
-            bleServer.start()
-            requestBatteryOptimizationExemptionIfNeeded()
-        }
+        syncOutboundTransports()
     }
 
     private fun updatePermissionState() {
@@ -83,25 +83,42 @@ class ConfigurationViewModel(
         configurationRepository.setBleTxEnabled(isChecked)
         if (isChecked) {
             if (hasBluetoothPermissions()) {
-                bleServer.start()
+                syncOutboundTransports()
                 requestBatteryOptimizationExemptionIfNeeded()
             } else {
+                syncOutboundTransports()
                 requestBluetoothPermissions.value = getRequiredBluetoothPermissions()
             }
         } else {
-            bleServer.stop()
+            syncOutboundTransports()
             batteryOptimizationPromptShownThisSession = false
         }
     }
 
+    fun onDirConEnabledClicked(isChecked: Boolean) {
+        configurationRepository.setDirConEnabled(isChecked)
+        syncOutboundTransports()
+        requestBatteryOptimizationExemptionIfNeeded()
+    }
+
     fun onBluetoothPermissionsResult(granted: Boolean) {
         if (granted) {
-            bleServer.start()
+            syncOutboundTransports()
             requestBatteryOptimizationExemptionIfNeeded()
             infoPopup.postValue("Bluetooth permissions granted. BLE service started.")
         } else {
             configurationRepository.setBleTxEnabled(false)
+            syncOutboundTransports()
             infoPopup.postValue("Bluetooth permissions are required for BLE functionality.")
+        }
+    }
+
+    private fun syncOutboundTransports() {
+        bleServer.stop()
+        bleServer.setDirConTransportEnabled(dirConEnabled.value)
+
+        if (bleTxEnabled.value && hasBluetoothPermissions()) {
+            bleServer.start()
         }
     }
 
@@ -234,10 +251,13 @@ class ConfigurationViewModel(
                 }
             )
         }
+        syncOutboundTransports()
         if (bleTxEnabled.value && !hasBluetoothPermissions()) {
             val permissions = getRequiredBluetoothPermissions()
             requestBluetoothPermissions.value = permissions
-        } else if (bleTxEnabled.value && hasBluetoothPermissions()) {
+        } else if ((bleTxEnabled.value || dirConEnabled.value) &&
+            (!bleTxEnabled.value || hasBluetoothPermissions())
+        ) {
             requestBatteryOptimizationExemptionIfNeeded()
         }
     }
@@ -264,7 +284,7 @@ class ConfigurationViewModel(
     }
 
     private fun requestBatteryOptimizationExemptionIfNeeded() {
-        if (!bleTxEnabled.value || batteryOptimizationPromptShownThisSession) {
+        if ((!bleTxEnabled.value && !dirConEnabled.value) || batteryOptimizationPromptShownThisSession) {
             return
         }
 

@@ -13,8 +13,9 @@ class ConfigurationRepository(context: Context, lifecycleOwner: LifecycleOwner) 
     enum class Preferences(val key: String) {
         ShowTimerWhenMinimized("showTimerWhenMinimized"),
         BleTxEnabled("bleTxEnabled"),
-    BleFtmsDeviceName("bleFtmsDeviceName"),
-    SerialNumber("serialNumber")
+        DirConEnabled("dirConEnabled"),
+        BleFtmsDeviceName("bleFtmsDeviceName"),
+        SerialNumber("serialNumber")
     }
 
     companion object {
@@ -27,11 +28,13 @@ class ConfigurationRepository(context: Context, lifecycleOwner: LifecycleOwner) 
 
     private val mutableShowTimerWhenMinimized = MutableStateFlow(true)
     private val mutableBleTxEnabled = MutableStateFlow(true)
+    private val mutableDirConEnabled = MutableStateFlow(true)
     private val mutableBleFtmsDeviceName = MutableStateFlow("Grupetto FTMS")
     private val mutableSerialNumber = MutableStateFlow("")
 
     val showTimerWhenMinimized = mutableShowTimerWhenMinimized
     val bleTxEnabled = mutableBleTxEnabled
+    val dirConEnabled = mutableDirConEnabled
     val bleFtmsDeviceName = mutableBleFtmsDeviceName
     val serialNumber = mutableSerialNumber
 
@@ -73,6 +76,13 @@ class ConfigurationRepository(context: Context, lifecycleOwner: LifecycleOwner) 
         }
     }
 
+    fun setDirConEnabled(enabled: Boolean) {
+        mutableDirConEnabled.value = enabled
+        sharedPreferences.edit {
+            putBoolean(Preferences.DirConEnabled.key, enabled)
+        }
+    }
+
     fun setBleFtmsDeviceName(name: String) {
         mutableBleFtmsDeviceName.value = name
         sharedPreferences.edit {
@@ -101,6 +111,10 @@ class ConfigurationRepository(context: Context, lifecycleOwner: LifecycleOwner) 
         mutableBleTxEnabled.value =
             sharedPreferences
                 .getBoolean(Preferences.BleTxEnabled.key, true)
+
+        mutableDirConEnabled.value =
+            sharedPreferences
+                .getBoolean(Preferences.DirConEnabled.key, true)
 
         mutableBleFtmsDeviceName.value =
             sharedPreferences
