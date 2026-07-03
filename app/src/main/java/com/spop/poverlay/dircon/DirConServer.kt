@@ -32,7 +32,9 @@ class DirConServer(
     fun start() {
         if (acceptJob != null) return
 
-        val serviceUuids = bridge.services().map { it.uuid.toShortUuidString() }
+        val serviceUuids = bridge.services()
+            .map { it.uuid.toShortUuidString() }
+            .toDirConMdnsServiceUuidList()
         mdnsAdvertiser.start(port, serviceUuids, serialNumberProvider())
 
         acceptJob = launch {
@@ -239,4 +241,16 @@ private fun UUID.toShortUuidString(): String {
     } else {
         text.lowercase()
     }
+}
+
+internal fun List<String>.toDirConMdnsServiceUuidList(): List<String> {
+    val available = map { it.lowercase() }.toSet()
+    val preferred = listOf(
+        "1816", // Cycling Speed and Cadence
+        "1818", // Cycling Power Service
+        "180d", // Heart Rate
+        "1826"  // Fitness Machine Service
+    )
+    val hasTrainerService = available.any { it in setOf("1816", "1818", "1826") }
+    return if (hasTrainerService) preferred else emptyList()
 }
