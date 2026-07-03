@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "android: install debug apk, launch app, forward jdwp",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "$ErrorActionPreference = 'Stop'; $adb = Join-Path $env:LOCALAPPDATA 'Android\\Sdk\\platform-tools\\adb.exe'; if (-not (Test-Path $adb)) { $adb = 'adb' }; ./gradlew.bat :app:installDebug; & $adb wait-for-device; & $adb shell am force-stop com.spop.poverlay; & $adb shell am start -D -n com.spop.poverlay/.MainActivity; $appPid = $null; for ($i = 0; $i -lt 40 -and -not $appPid; $i++) { Start-Sleep -Milliseconds 250; $appPid = (& $adb shell pidof com.spop.poverlay).Trim() }; if (-not $appPid) { throw 'Could not find com.spop.poverlay on the connected Android device.' }; & $adb forward tcp:8700 jdwp:$appPid; Write-Host \"Forwarded com.spop.poverlay JDWP process $appPid to localhost:8700\""
+            ],
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}

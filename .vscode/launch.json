@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Android Tablet: Install, Launch, Attach",
+            "type": "java",
+            "request": "attach",
+            "hostName": "localhost",
+            "port": 8700,
+            "preLaunchTask": "android: install debug apk, launch app, forward jdwp",
+            "timeout": 30000
+        }
+    ]
+}

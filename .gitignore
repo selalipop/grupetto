@@ -16,8 +16,6 @@
 local.properties
 app/release
 app/debug
-.vscode/
-
 # Claude Code
 .claude/
 CLAUDE.md
