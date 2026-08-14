@@ -1,12 +1,21 @@
 package com.spop.poverlay.ble
 
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
+import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import com.spop.poverlay.sensor.interfaces.SensorInterface
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicInteger
 
 class BleServerTest {
 
@@ -126,6 +135,46 @@ class BleServerTest {
         // 70 revs. 70 * 1024 = 71680 ticks.
         // Wrapped: 71680 % 65536 = 6144
         assertEquals(6144, bleServer.cscLastCrankEvtTime)
+    }
+
+    @Test
+    fun `concurrent starts cannot overlap GATT server registrations`() {
+        mockkStatic(ContextCompat::class)
+        every { ContextCompat.checkSelfPermission(context, any()) } returns
+            PackageManager.PERMISSION_GRANTED
+        val adapter = mockk<BluetoothAdapter>(relaxed = true)
+        val advertiser = mockk<BluetoothLeAdvertiser>(relaxed = true)
+        every { bluetoothManager.adapter } returns adapter
+        every { adapter.bluetoothLeAdvertiser } returns advertiser
+        val activeOpens = AtomicInteger(0)
+        val maximumActiveOpens = AtomicInteger(0)
+        every { bluetoothManager.openGattServer(context, any()) } answers {
+            val active = activeOpens.incrementAndGet()
+            maximumActiveOpens.updateAndGet { current -> maxOf(current, active) }
+            Thread.sleep(50)
+            activeOpens.decrementAndGet()
+            null
+        }
+
+        try {
+            val ready = CountDownLatch(2)
+            val start = CountDownLatch(1)
+            val workers = List(2) {
+                Thread {
+                    ready.countDown()
+                    start.await()
+                    bleServer.start()
+                }.also { it.start() }
+            }
+
+            ready.await()
+            start.countDown()
+            workers.forEach { it.join() }
+
+            assertEquals(1, maximumActiveOpens.get())
+        } finally {
+            unmockkStatic(ContextCompat::class)
+        }
     }
 }
 

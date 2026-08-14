@@ -114,12 +114,13 @@ class BleServer(
     private val servicesToRegister = LinkedList<BaseBleService>()
     private var currentlyRegisteringService: BaseBleService? = null
     private var serviceAddTimeoutJob: Job? = null
+    private var gattServerGeneration = 0L
     
     // Advertising state tracking
-    private var isAdvertising = false
+    @Volatile private var isAdvertising = false
     private var lastAdvertisingStartTime = 0L
     private var lastAdvertisingFailureCode: Int? = null
-    private var isServerStarted = false
+    @Volatile private var isServerStarted = false
     private var heartRateServiceEnabled = false
 
     // CCCD UUID for checking notification subscriptions
@@ -220,6 +221,90 @@ class BleServer(
         return services
     }
 
+    private fun callbackForGeneration(generation: Long) =
+        object : BluetoothGattServerCallback() {
+            private fun dispatch(callback: () -> Unit) {
+                synchronized(this@BleServer) {
+                    if (generation != gattServerGeneration || gattServer == null) {
+                        Timber.d("Ignoring callback from stale GATT server generation $generation")
+                        return
+                    }
+                    callback()
+                }
+            }
+
+            override fun onServiceAdded(status: Int, service: BluetoothGattService) =
+                dispatch { this@BleServer.onServiceAdded(status, service) }
+
+            override fun onConnectionStateChange(
+                device: BluetoothDevice?,
+                status: Int,
+                newState: Int
+            ) = dispatch { this@BleServer.onConnectionStateChange(device, status, newState) }
+
+            override fun onMtuChanged(device: BluetoothDevice?, mtu: Int) =
+                dispatch { this@BleServer.onMtuChanged(device, mtu) }
+
+            override fun onCharacteristicWriteRequest(
+                device: BluetoothDevice,
+                requestId: Int,
+                characteristic: BluetoothGattCharacteristic,
+                preparedWrite: Boolean,
+                responseNeeded: Boolean,
+                offset: Int,
+                value: ByteArray?
+            ) = dispatch {
+                this@BleServer.onCharacteristicWriteRequest(
+                    device,
+                    requestId,
+                    characteristic,
+                    preparedWrite,
+                    responseNeeded,
+                    offset,
+                    value
+                )
+            }
+
+            override fun onCharacteristicReadRequest(
+                device: BluetoothDevice,
+                requestId: Int,
+                offset: Int,
+                characteristic: BluetoothGattCharacteristic
+            ) = dispatch {
+                this@BleServer.onCharacteristicReadRequest(device, requestId, offset, characteristic)
+            }
+
+            override fun onDescriptorReadRequest(
+                device: BluetoothDevice,
+                requestId: Int,
+                offset: Int,
+                descriptor: BluetoothGattDescriptor
+            ) = dispatch {
+                this@BleServer.onDescriptorReadRequest(device, requestId, offset, descriptor)
+            }
+
+            override fun onDescriptorWriteRequest(
+                device: BluetoothDevice,
+                requestId: Int,
+                descriptor: BluetoothGattDescriptor,
+                preparedWrite: Boolean,
+                responseNeeded: Boolean,
+                offset: Int,
+                value: ByteArray?
+            ) = dispatch {
+                this@BleServer.onDescriptorWriteRequest(
+                    device,
+                    requestId,
+                    descriptor,
+                    preparedWrite,
+                    responseNeeded,
+                    offset,
+                    value
+                )
+            }
+        }
+
+    @Synchronized
     fun start() {
         if (isServerStarted) {
             Timber.d("BLE server already started, ignoring duplicate start()")
@@ -262,12 +347,14 @@ class BleServer(
         }
 
         try {
-            val server = bluetoothManager.openGattServer(context, this)
+            val generation = ++gattServerGeneration
+            val server = bluetoothManager.openGattServer(context, callbackForGeneration(generation))
             if (server == null) {
                 Timber.e("Failed to open GATT server (returned null)")
                 return
             }
             gattServer = server
+            isServerStarted = true
             
             // Register Bluetooth state change receiver
             val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
@@ -282,7 +369,6 @@ class BleServer(
             startWatchdog()
             startHeartRateServiceWatcher()
             
-            isServerStarted = true
         } catch (e: SecurityException) {
             Timber.e(e, "Failed to open GATT server due to missing Bluetooth permission")
             stop() // Clean up partial initialization
@@ -292,6 +378,7 @@ class BleServer(
         }
     }
 
+    @Synchronized
     private fun registerNextService() {
         if (servicesToRegister.isEmpty()) {
             currentlyRegisteringService = null
@@ -326,60 +413,85 @@ class BleServer(
         }
     }
 
+    @Synchronized
     fun stop() {
+        isServerStarted = false
+        isDirConOnlyStarted = false
+        gattServerGeneration++
+
+        // Detach first so no callback or concurrent operation can use a server once teardown starts.
+        val serverToClose = gattServer
+        gattServer = null
+        serviceAddTimeoutJob?.cancel()
+        serviceAddTimeoutJob = null
+        servicesToRegister.clear()
+        currentlyRegisteringService = null
+
+        // Closing the detached registration is the highest-priority teardown operation.
+        closeGattServer(serverToClose)
+
+        stopWatchdog()
+        stopSensorDataUpdates()
+        stopHeartRateServiceWatcher()
+        stopDirCon()
+        stopAdvertising()
+            
+        // Unregister Bluetooth state change receiver
         try {
-            isServerStarted = false
-            isDirConOnlyStarted = false
-            stopWatchdog()
-            stopSensorDataUpdates()
-            stopHeartRateServiceWatcher()
-            stopDirCon()
-            stopAdvertising()
+            context.unregisterReceiver(bluetoothStateReceiver)
+            Timber.d("Unregistered Bluetooth state change receiver")
+        } catch (e: IllegalArgumentException) {
+            // Receiver was not registered, this is normal if stop() called without start()
+            Timber.d("Bluetooth state receiver was not registered (normal if not started)")
+        }
+        try {
+            context.unregisterReceiver(bondStateReceiver)
+        } catch (e: IllegalArgumentException) {
+            Timber.d("Bond state receiver was not registered")
+        }
+
+        registeredServices.clear()
+        heartRateServiceEnabled = false
             
-            // Unregister Bluetooth state change receiver
-            try {
-                context.unregisterReceiver(bluetoothStateReceiver)
-                Timber.d("Unregistered Bluetooth state change receiver")
-            } catch (e: IllegalArgumentException) {
-                // Receiver was not registered, this is normal if stop() called without start()
-                Timber.d("Bluetooth state receiver was not registered (normal if not started)")
-            }
-            try {
-                context.unregisterReceiver(bondStateReceiver)
-            } catch (e: IllegalArgumentException) {
-                Timber.d("Bond state receiver was not registered")
-            }
+        // Reset state tracking
+        isAdvertising = false
+        lastAdvertisingStartTime = 0L
+        lastAdvertisingFailureCode = null
             
-            gattServer?.clearServices()
-            gattServer?.close()
-            gattServer = null
-            registeredServices.clear()
-            servicesToRegister.clear()
-            currentlyRegisteringService = null
-            heartRateServiceEnabled = false
+        // Reset smoothing and CSC state so a restart begins fresh
+        smoothedCadence = null
+        smoothedPower = null
+        smoothedSpeedMph = null
+        smoothedResistance = null
+        cscCrankResidual = 0.0
+        cscWheelResidual = 0.0
+        cscCumulativeWheelRev = 0L
+        cscLastWheelEvtTime = 0
+        cscCumulativeCrankRev = 0
+        cscLastCrankEvtTime = 0
             
-            // Reset state tracking
-            isAdvertising = false
-            lastAdvertisingStartTime = 0L
-            lastAdvertisingFailureCode = null
-            
-            // Reset smoothing and CSC state so a restart begins fresh
-            smoothedCadence = null
-            smoothedPower = null
-            smoothedSpeedMph = null
-            smoothedResistance = null
-            cscCrankResidual = 0.0
-            cscWheelResidual = 0.0
-            cscCumulativeWheelRev = 0L
-            cscLastWheelEvtTime = 0
-            cscCumulativeCrankRev = 0
-            cscLastCrankEvtTime = 0
-            
-            synchronized(notificationSubscriptions) {
-                notificationSubscriptions.clear()
-            }
+        synchronized(notificationSubscriptions) {
+            notificationSubscriptions.clear()
+        }
+    }
+
+    private fun closeGattServer(server: BluetoothGattServer?) {
+        if (server == null) return
+
+        try {
+            server.clearServices()
         } catch (e: SecurityException) {
-            Timber.e(e, "Missing bluetooth permissions")
+            Timber.e(e, "Missing bluetooth permissions while clearing GATT services")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to clear GATT services")
+        }
+
+        try {
+            server.close()
+        } catch (e: SecurityException) {
+            Timber.e(e, "Missing bluetooth permissions while closing GATT server")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to close GATT server")
         }
     }
 
@@ -445,7 +557,10 @@ class BleServer(
         heartRateServiceWatcherJob = null
     }
 
+    @Synchronized
     private fun updateHeartRateServiceRegistration(enable: Boolean) {
+        if (!isServerStarted || gattServer == null) return
+
         heartRateServiceEnabled = enable
         Timber.i("Heart rate BLE service ${if (enable) "enabled" else "disabled"}")
 
@@ -634,7 +749,13 @@ class BleServer(
         }
     }
     
+    @Synchronized
     private fun restartGattAndAdvertising(reason: String) {
+        if (!isServerStarted) {
+            Timber.d("Ignoring GATT restart after server was stopped: $reason")
+            return
+        }
+
         Timber.i("Restarting GATT and advertising: $reason")
         
         try {
@@ -642,9 +763,14 @@ class BleServer(
             stopAdvertising()
             
             // Close and reopen GATT server
-            gattServer?.clearServices()
-            gattServer?.close()
+            val serverToClose = gattServer
             gattServer = null
+            gattServerGeneration++
+            serviceAddTimeoutJob?.cancel()
+            serviceAddTimeoutJob = null
+            servicesToRegister.clear()
+            currentlyRegisteringService = null
+            closeGattServer(serverToClose)
             
             val bluetoothAdapter = bluetoothManager.adapter
             if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
@@ -658,18 +784,21 @@ class BleServer(
                 return
             }
             
-            gattServer = bluetoothManager.openGattServer(context, this)
-            if (gattServer == null) {
+            val generation = ++gattServerGeneration
+            val replacement = bluetoothManager.openGattServer(
+                context,
+                callbackForGeneration(generation)
+            )
+            if (replacement == null) {
                 Timber.e("Cannot restart: Failed to open GATT server")
                 return
             }
+            gattServer = replacement
             
             // Re-register all services
             val savedServices = registeredServices.toList()
             registeredServices.clear()
-            servicesToRegister.clear()
             servicesToRegister.addAll(savedServices)
-            currentlyRegisteringService = null
             
             registerNextService()
             
@@ -764,6 +893,7 @@ class BleServer(
                 }
             }
 
+    @Synchronized
     override fun onServiceAdded(status: Int, service: BluetoothGattService) {
         serviceAddTimeoutJob?.cancel()
         serviceAddTimeoutJob = null
