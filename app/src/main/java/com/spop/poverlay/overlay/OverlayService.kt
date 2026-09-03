@@ -453,15 +453,17 @@ class OverlayService : LifecycleEnabledService() {
     private fun syncBackgroundExecutionGuards() {
         val bleEnabled = isBleTxEnabled()
         val dirConEnabled = isDirConEnabled()
+        val shouldRunBle = bleEnabled && hasBleRuntimePermissions()
 
-        bleServer.stop()
-        bleServer.setDirConTransportEnabled(dirConEnabled)
-
-        if (bleEnabled && hasBleRuntimePermissions()) {
+        if (shouldRunBle) {
+            bleServer.setDirConTransportEnabled(dirConEnabled)
             bleServer.start()
+        } else {
+            bleServer.stop()
+            bleServer.setDirConTransportEnabled(dirConEnabled)
         }
 
-        if ((bleEnabled && hasBleRuntimePermissions()) || dirConEnabled) {
+        if (shouldRunBle || dirConEnabled) {
             acquireWakeLock()
         } else {
             releaseWakeLock()

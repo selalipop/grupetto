@@ -1,6 +1,7 @@
 package com.spop.poverlay.ble
 
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothGattServer
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
@@ -11,6 +12,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import io.mockk.verify
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -30,6 +33,9 @@ class BleServerTest {
         context = mockk(relaxed = true)
         bluetoothManager = mockk(relaxed = true)
         sensorInterface = mockk(relaxed = true)
+        every { sensorInterface.power } returns flowOf(0f)
+        every { sensorInterface.cadence } returns flowOf(0f)
+        every { sensorInterface.resistance } returns flowOf(0f)
         timeProvider = FakeTimeProvider()
         // Initialize with default time 0
         timeProvider.currentTime = 0
@@ -175,6 +181,20 @@ class BleServerTest {
         } finally {
             unmockkStatic(ContextCompat::class)
         }
+    }
+
+    @Test
+    fun `stop closes GATT server without clearing services first`() {
+        val gattServer = mockk<BluetoothGattServer>(relaxed = true)
+        BleServer::class.java.getDeclaredField("gattServer").apply {
+            isAccessible = true
+            set(bleServer, gattServer)
+        }
+
+        bleServer.stop()
+
+        verify(exactly = 0) { gattServer.clearServices() }
+        verify(exactly = 1) { gattServer.close() }
     }
 }
 

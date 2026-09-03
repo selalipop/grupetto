@@ -114,11 +114,13 @@ class ConfigurationViewModel(
     }
 
     private fun syncOutboundTransports() {
-        bleServer.stop()
-        bleServer.setDirConTransportEnabled(dirConEnabled.value)
-
-        if (bleTxEnabled.value && hasBluetoothPermissions()) {
+        val shouldRunBle = bleTxEnabled.value && hasBluetoothPermissions()
+        if (shouldRunBle) {
+            bleServer.setDirConTransportEnabled(dirConEnabled.value)
             bleServer.start()
+        } else {
+            bleServer.stop()
+            bleServer.setDirConTransportEnabled(dirConEnabled.value)
         }
     }
 
